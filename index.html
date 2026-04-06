@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; script-src 'self'; img-src 'none'; connect-src 'none'; form-action 'none';">
+  <title>Coral Sim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="coral.css">
+</head>
+<body>
+
+  <!-- URL param load banner (hidden until URL params detected) -->
+  <div id="url-banner" role="status" aria-live="polite" hidden>
+    <span id="url-banner-msg">&#8505;&#xFE0E; Code pre-loaded from shared link. Review it below, then press Execute.</span>
+    <button id="btn-url-banner-close" aria-label="Dismiss banner">&#x2715;</button>
+  </div>
+
+  <!-- Title bar -->
+  <header>
+    <h1>Coral Sim</h1>
+    <div class="header-controls">
+      <select id="sample-select" aria-label="Load sample program">
+        <option value="">Load sample&hellip;</option>
+        <option value="hello">Hello World</option>
+        <option value="math">Simple Math</option>
+        <option value="branch">If/Else Branch</option>
+        <option value="while">While Loop</option>
+        <option value="for">For Loop</option>
+        <option value="array">Array Example</option>
+        <option value="func">Function Example (F&rarr;C)</option>
+      </select>
+      <button id="btn-help" aria-label="Open help">?</button>
+      <button id="btn-theme" aria-label="Switch to light mode">&#x2600;&#xFE0E;</button>
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <div id="toolbar" role="toolbar" aria-label="Execution controls">
+    <button id="btn-execute-edit" aria-label="Execute program">Execute</button>
+    <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
+    <button id="btn-step" disabled aria-label="Step forward">Step &#9654;</button>
+    <button id="btn-run-pause" disabled aria-label="Run program" aria-pressed="false">Run</button>
+    <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
+    <label for="speed-slider" class="speed-label">Speed</label>
+    <input type="range" id="speed-slider" min="1" max="9" value="5" disabled
+           aria-label="Execution speed" aria-valuemin="1" aria-valuemax="9" aria-valuenow="5"
+           aria-valuetext="Medium (step every 1.2 seconds)">
+    <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
+    <button id="btn-instant" disabled aria-label="Run to completion instantly">Instant &#9193;</button>
+  </div>
+
+  <!-- Status bar -->
+  <div id="status-bar" role="status" aria-live="polite" aria-atomic="false" class="state-edit">
+    <span id="status-indicator" aria-hidden="true">&#x25CF;</span>
+    <span id="status-state">Edit Mode</span>
+    <span id="status-detail" aria-live="polite"></span>
+    <span id="status-step" aria-live="polite"></span>
+  </div>
+
+  <!-- Input area -->
+  <div id="input-area">
+    <label for="input-textarea">Program Inputs</label>
+    <textarea id="input-textarea" placeholder="Enter space-separated inputs (e.g. 10 3 -1)" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+  </div>
+
+  <!-- Tab bar -->
+  <div id="tab-bar" role="tablist" aria-label="View panels">
+    <button role="tab" id="tab-code" aria-controls="panel-code" aria-selected="true" tabindex="0">Code</button>
+    <button role="tab" id="tab-flowchart" aria-controls="panel-flowchart" aria-selected="false" tabindex="-1">Flowchart</button>
+  </div>
+
+  <!-- Main workspace -->
+  <main id="workspace">
+
+    <!-- Code panel -->
+    <section id="panel-code" role="tabpanel" aria-labelledby="tab-code">
+      <div id="editor-wrap">
+        <div id="gutter" aria-hidden="true"></div>
+        <div id="editor-container">
+          <div id="highlight-overlay" aria-hidden="true"></div>
+          <div id="active-line-highlight" aria-hidden="true"></div>
+          <textarea id="code-editor"
+                    aria-label="Coral code editor"
+                    spellcheck="false"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    autocomplete="off"
+                    placeholder="Write Coral code here&hellip;"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Flowchart panel -->
+    <section id="panel-flowchart" role="tabpanel" aria-labelledby="tab-flowchart" hidden>
+      <div id="flowchart-placeholder">Press Execute to generate the flowchart.</div>
+      <div id="flowchart-viewport" aria-label="Flowchart view. Use scroll wheel to zoom, drag to pan.">
+        <svg id="flowchart-svg" role="img" aria-label="Program flowchart">
+          <g id="chart-root"></g>
+        </svg>
+      </div>
+      <div id="flowchart-controls" aria-label="Flowchart view controls">
+        <button id="btn-fit" aria-label="Fit flowchart to screen">Fit</button>
+        <button id="btn-zoom-in" aria-label="Zoom in">+</button>
+        <button id="btn-zoom-out" aria-label="Zoom out">&minus;</button>
+      </div>
+    </section>
+
+    <!-- Variables panel -->
+    <aside id="vars-panel" aria-label="Variable values">
+      <div id="vars-header">Variables</div>
+      <table id="vars-table">
+        <caption class="sr-only">Current variable values</caption>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Type</th>
+            <th scope="col">Value</th>
+          </tr>
+        </thead>
+        <tbody id="vars-tbody">
+          <tr id="vars-empty-row">
+            <td colspan="3" class="vars-empty">No variables yet</td>
+          </tr>
+        </tbody>
+      </table>
+    </aside>
+
+  </main>
+
+  <!-- Output area -->
+  <section id="output-area" aria-label="Program output">
+    <div id="output-header">
+      <span>Output</span>
+      <button id="btn-clear-output" aria-label="Clear output">Clear</button>
+    </div>
+    <div id="output" role="log" aria-live="polite" aria-atomic="false"></div>
+  </section>
+
+  <!-- Help modal -->
+  <dialog id="help-modal" aria-labelledby="help-modal-title">
+    <div class="modal-header">
+      <h2 id="help-modal-title">How to Use Coral Sim</h2>
+      <button id="btn-help-close" aria-label="Close help">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+
+      <section class="help-section">
+        <h3>Getting Started</h3>
+        <p>Write Coral code in the editor on the left. If your program needs inputs, enter them space-separated in the <strong>Program Inputs</strong> box. Press <strong>Execute</strong> to compile and get ready to run.</p>
+      </section>
+
+      <section class="help-section">
+        <h3>Execution Controls</h3>
+        <dl>
+          <dt>Execute / Edit</dt>
+          <dd>Compiles your code and enters execution mode. Press again (labeled <em>Edit</em>) to return to editing.</dd>
+          <dt>Step &#9654;</dt>
+          <dd>Advances execution one step at a time. The current line is highlighted in the editor and flowchart.</dd>
+          <dt>Run / Pause</dt>
+          <dd>Runs the program automatically at the selected speed. Press again to pause.</dd>
+          <dt>Speed slider</dt>
+          <dd>Controls how fast <em>Run</em> advances. Leftmost = slowest (3 s/step). Rightmost = fastest (0.75 s/step).</dd>
+          <dt>Instant &#9193;</dt>
+          <dd>Runs the entire program to completion immediately, showing the final output and variable values.</dd>
+        </dl>
+      </section>
+
+      <section class="help-section">
+        <h3>Status Bar</h3>
+        <p>The colored dot and state label below the toolbar show what the simulator is doing:</p>
+        <ul>
+          <li><strong>Edit Mode</strong> &mdash; you can modify code and inputs</li>
+          <li><strong>Ready</strong> &mdash; compiled successfully; press Step or Run</li>
+          <li><strong>Running</strong> &mdash; executing automatically</li>
+          <li><strong>Paused</strong> &mdash; mid-execution; resume with Run or advance with Step</li>
+          <li><strong>Complete</strong> &mdash; program finished; press Edit to start over</li>
+        </ul>
+        <p>The detail area shows which sub-part of a loop or branch is being evaluated (e.g., <em>for &mdash; checking condition</em>). The step counter on the right tracks total steps taken.</p>
+      </section>
+
+      <section class="help-section">
+        <h3>Keyboard Navigation in the Editor</h3>
+        <p>Inside the editor, <strong>Tab</strong> inserts three spaces (Coral requires 3-space indentation). To move focus out of the editor using only the keyboard, press <strong>Escape</strong> first, then Tab to advance to the next control.</p>
+      </section>
+
+      <section class="help-section">
+        <h3>The Variables Panel</h3>
+        <p>The panel on the right shows all declared variables and their current values as execution proceeds. A dash (<strong>&mdash;</strong>) means the variable has been declared but not yet assigned. Array values appear as an expandable sub-table showing each index.</p>
+      </section>
+
+      <section class="help-section">
+        <h3>The Flowchart</h3>
+        <p>Available for programs without user-defined functions. Switch to the <strong>Flowchart</strong> tab after pressing Execute. During stepping, the active node is highlighted in sync with the editor.</p>
+        <ul>
+          <li><strong>Scroll wheel</strong> or pinch &mdash; zoom in/out</li>
+          <li><strong>Drag</strong> &mdash; pan around</li>
+          <li><strong>Fit</strong> button &mdash; reset zoom to fit everything on screen</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h3>Sample Programs</h3>
+        <p>The <strong>Load sample&hellip;</strong> dropdown loads pre-written examples into the editor and pre-fills the input area. Selecting a sample replaces any code currently in the editor.</p>
+      </section>
+
+      <section class="help-section">
+        <h3>Output Formatting</h3>
+        <p>Use <code>Put x to output</code> to print a value. Add <code>with N decimal places</code> to control float precision (e.g., <code>Put result with 2 decimal places to output</code>). To print a newline, use a separate statement: <code>Put "\n" to output</code>.</p>
+      </section>
+
+      <section class="help-section">
+        <h3>Language Reference</h3>
+        <p><a href="https://corallanguage.org/spec/" target="_blank" rel="noopener noreferrer">Coral Language Reference &#8599;</a> &mdash; opens the official specification in a new tab.</p>
+      </section>
+
+    </div>
+  </dialog>
+
+  <script src="coral.js"></script>
+</body>
+</html>
