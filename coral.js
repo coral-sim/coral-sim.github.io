@@ -1581,9 +1581,9 @@ function _placeStmt(stmt, prevIds, ls) {
     ls.cx = savedCx;
     ls.y  = Math.max(afterCondY, bodyBottomY);
 
-    // Back edges from body exits to condition
+    // Back edges from body exits to condition (arrive at right-bottom edge of diamond)
     for (const eid of bodyExits) {
-      ls.edges.push({ from: eid, to: condId, fromSide:'bottom', toSide:'left', isBack: true });
+      ls.edges.push({ from: eid, to: condId, fromSide:'bottom', isBack: true });
     }
     // Mark the cond→body edge: exits right side of diamond, arrives at left side of first body node
     _markFirstForwardEdgeSides(ls.edges, condId, 'yes', 'left');
@@ -1628,8 +1628,8 @@ function _placeStmt(stmt, prevIds, ls) {
     ls.cx = savedCx;
     ls.y  = Math.max(afterCondY, branchBottomY);
 
-    // Back edge: update → condition (left side)
-    ls.edges.push({ from: updId, to: condId, fromSide:'bottom', toSide:'left', isBack: true });
+    // Back edge: update → condition (arrive at right-bottom edge of diamond)
+    ls.edges.push({ from: updId, to: condId, fromSide:'bottom', isBack: true });
 
     // Mark cond→body edge: exits right side of diamond, arrives at left side of first body node
     _markFirstForwardEdgeSides(ls.edges, condId, 'yes', 'left');
@@ -1756,9 +1756,12 @@ function renderFlowchartSVG(graph, activeNodeId) {
 
     let d;
     if (e.isBack) {
-      // Back edge (loop return): down a bit, left of all shapes, up, then right to diamond left point
-      const midX = Math.min(from.x, to.x) - 40;
-      d = `M${fx},${fy} L${fx},${fy+20} L${midX},${fy+20} L${midX},${ty} L${tx},${ty}`;
+      // Back edge (loop return): arrive at midpoint of diamond's right-bottom edge
+      // (halfway between right corner and bottom corner — between TRUE and FALSE exits)
+      const atx = to.x + to.w * 3 / 4;           // right-bottom edge x
+      const aty = to.y + to.h * 3 / 4;           // right-bottom edge y
+      const routingY = Math.max(fy + 10, aty + 30); // safely below diamond's bottom corner
+      d = `M${fx},${fy} L${fx},${routingY} L${atx},${routingY} L${atx},${aty}`;
     } else if (fromSide === 'yes' || fromSide === 'right') {
       // TRUE branch: from diamond right point, horizontal to left side of first body node
       // (fy === ty when first body node is properly aligned with diamond mid-Y)
@@ -1783,8 +1786,8 @@ function renderFlowchartSVG(graph, activeNodeId) {
         // Label just above the horizontal segment, right of the diamond right point
         svgParts.push(`<text class="fc-edge-label" x="${fx+6}" y="${fy-4}">TRUE</text>`);
       } else if (fromSide === 'bottom' || fromSide === 'no') {
-        // Label to the left of the downward segment
-        svgParts.push(`<text class="fc-edge-label" x="${from.x - 36}" y="${fy+14}">FALSE</text>`);
+        // Label just below-left of the diamond's bottom vertex, adjacent to the downward arrow
+        svgParts.push(`<text class="fc-edge-label" x="${fx - 44}" y="${fy + 14}">FALSE</text>`);
       }
     }
   }
@@ -2130,6 +2133,10 @@ function finishExecution() {
   clearActiveLineHighlight();
   setState(STATE.COMPLETE);
   if (runTimer) { clearInterval(runTimer); runTimer = null; }
+  // Highlight the End node in the flowchart so students know execution is done
+  if (flowchartGraph && activeTab === 'flowchart') {
+    renderFlowchart(flowchartGraph.endId);
+  }
   const done = document.createElement('div');
   done.className = 'out-warn';
   done.textContent = '— Program complete —';
@@ -2467,7 +2474,10 @@ function switchToTab(name) {
   tabFlowchart.setAttribute('aria-selected', isCode ? 'false' : 'true');
   tabCode.tabIndex      = isCode ? 0 : -1;
   tabFlowchart.tabIndex = isCode ? -1 : 0;
-  if (!isCode && flowchartGraph) renderFlowchart(null);
+  if (!isCode && flowchartGraph) {
+    const activeId = state === STATE.COMPLETE ? flowchartGraph.endId : null;
+    renderFlowchart(activeId);
+  }
 }
 
 // ── Theme toggle ──
