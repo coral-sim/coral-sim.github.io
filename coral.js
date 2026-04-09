@@ -1440,7 +1440,9 @@ function newNodeId() { return 'fc' + (++_nodeId); }
 function exprText(node) {
   if (!node) return '';
   switch (node.type) {
-    case 'Literal': return typeof node.value === 'string' ? `"${node.value}"` : String(node.value);
+    case 'Literal': return typeof node.value === 'string'
+      ? `"${node.value.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`
+      : String(node.value);
     case 'Var': return node.name;
     case 'ArrayAccess': return `${node.name}[${exprText(node.index)}]`;
     case 'SizeAccess': return `${node.name}.size`;
@@ -1567,11 +1569,11 @@ function _placeStmt(stmt, prevIds, ls) {
 
     for (const pid of prevIds) ls.edges.push({ from: pid, to: condId, fromSide:'bottom', toSide:'top' });
 
-    // Body in branch column
+    // Body in branch column — first node vertically centered with diamond right midpoint
     const branchCx = mainCx + FC.BRANCH_OFFSET;
     const savedCx = ls.cx, savedY = ls.y;
     ls.cx = branchCx;
-    ls.y  = condTopY;  // body starts level with top of diamond
+    ls.y  = condTopY + FC.DIAMOND_H / 2 - FC.NODE_H / 2;
 
     const bodyExits = _placeBlock(stmt.body, [condId], ls);
     const bodyBottomY = ls.y;
@@ -1583,8 +1585,8 @@ function _placeStmt(stmt, prevIds, ls) {
     for (const eid of bodyExits) {
       ls.edges.push({ from: eid, to: condId, fromSide:'bottom', toSide:'left', isBack: true });
     }
-    // Mark the cond→body edge as 'yes' (right side of diamond)
-    _markFirstForwardEdge(ls.edges, condId, 'yes');
+    // Mark the cond→body edge: exits right side of diamond, arrives at left side of first body node
+    _markFirstForwardEdgeSides(ls.edges, condId, 'yes', 'left');
 
     return [condId]; // FALSE exit = bottom of diamond
   }
@@ -1606,11 +1608,11 @@ function _placeStmt(stmt, prevIds, ls) {
     const condTopY = condNode.y;
     const afterCondY = ls.y;
 
-    // Body in branch column
+    // Body in branch column — first node vertically centered with diamond right midpoint
     const branchCx = mainCx + FC.BRANCH_OFFSET;
     const savedCx = ls.cx, savedY = ls.y;
     ls.cx = branchCx;
-    ls.y  = condTopY;
+    ls.y  = condTopY + FC.DIAMOND_H / 2 - FC.NODE_H / 2;
 
     const bodyExits = _placeBlock(stmt.body, [condId], ls);
 
@@ -1629,8 +1631,8 @@ function _placeStmt(stmt, prevIds, ls) {
     // Back edge: update → condition (left side)
     ls.edges.push({ from: updId, to: condId, fromSide:'bottom', toSide:'left', isBack: true });
 
-    // Mark cond→body edge as 'yes'
-    _markFirstForwardEdge(ls.edges, condId, 'yes');
+    // Mark cond→body edge: exits right side of diamond, arrives at left side of first body node
+    _markFirstForwardEdgeSides(ls.edges, condId, 'yes', 'left');
 
     return [condId]; // FALSE exit
   }
@@ -1646,6 +1648,7 @@ function _placeStmt(stmt, prevIds, ls) {
     let chainPrevIds = prevIds;
     const allBranchExits = [];  // exits from all true-bodies
     let lastCondId = null;
+    let branchColMaxY = ls.y;   // tracks furthest-down point in branch column
 
     for (const branch of branches) {
       const condId = newNodeId();
@@ -1656,21 +1659,22 @@ function _placeStmt(stmt, prevIds, ls) {
 
       for (const pid of chainPrevIds) ls.edges.push({ from: pid, to: condId, fromSide:'bottom', toSide:'top' });
 
-      // TRUE body in branch column
+      // TRUE body in branch column — first node vertically centered with diamond right midpoint
       const branchCx = mainCx + FC.BRANCH_OFFSET;
       const savedCx = ls.cx, savedY = ls.y;
       ls.cx = branchCx;
-      ls.y  = condTopY;
+      ls.y  = condTopY + FC.DIAMOND_H / 2 - FC.NODE_H / 2;
 
       const trueExits = _placeBlock(branch.body, [condId], ls);
       const branchBottomY = ls.y;
+      branchColMaxY = Math.max(branchColMaxY, branchBottomY);
       allBranchExits.push(...trueExits);
 
       ls.cx = savedCx;
       ls.y  = Math.max(afterCondY, branchBottomY);
 
-      // Mark cond→true body edge as 'yes'
-      _markFirstForwardEdge(ls.edges, condId, 'yes');
+      // Mark cond→true body edge: exits right side, arrives at left side of first body node
+      _markFirstForwardEdgeSides(ls.edges, condId, 'yes', 'left');
 
       // The FALSE path from this condition leads to the next elseif/else/merge
       chainPrevIds = [condId]; // condId FALSE exit feeds next condition
@@ -1679,13 +1683,11 @@ function _placeStmt(stmt, prevIds, ls) {
 
     // Else body or pass-through
     if (stmt.alternate) {
-      // Else body in branch column at current position
+      // Else body in branch column, placed below all TRUE branch bodies
       const branchCx = mainCx + FC.BRANCH_OFFSET;
       const savedCx = ls.cx, savedY = ls.y;
       ls.cx = branchCx;
-      // Find the last condition node's y to align else body
-      const lastCondNode = ls.nodes.find(n => n.id === lastCondId);
-      ls.y = lastCondNode ? lastCondNode.y : ls.y;
+      ls.y  = branchColMaxY;  // start after all TRUE branch bodies in branch column
 
       const elseExits = _placeBlock(stmt.alternate, chainPrevIds, ls);
       const elseBottomY = ls.y;
@@ -1705,9 +1707,9 @@ function _placeStmt(stmt, prevIds, ls) {
   return prevIds;
 }
 
-function _markFirstForwardEdge(edges, fromId, side) {
+function _markFirstForwardEdgeSides(edges, fromId, fromSide, toSide) {
   const e = edges.find(e => e.from === fromId && !e.isBack);
-  if (e) e.fromSide = side;
+  if (e) { e.fromSide = fromSide; if (toSide !== undefined) e.toSide = toSide; }
 }
 
 function renderFlowchartSVG(graph, activeNodeId) {
@@ -1718,7 +1720,8 @@ function renderFlowchartSVG(graph, activeNodeId) {
   if (visibleNodes.length === 0) return '<svg></svg>';
 
   const pad = 60;
-  const maxX = Math.max(...visibleNodes.map(n => n.x + n.w)) + pad;
+  const rightBound = Math.max(...visibleNodes.map(n => n.x + n.w));
+  const maxX = rightBound + pad + 40;  // extra space for right-rail routing
   const maxY = Math.max(...visibleNodes.map(n => n.y + n.h)) + pad;
 
   const svgParts = [
@@ -1732,10 +1735,10 @@ function renderFlowchartSVG(graph, activeNodeId) {
   // Helper: get connection point on a node
   function connPt(n, side) {
     const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
-    if (side === 'top')    return [cx, n.y];
-    if (side === 'bottom') return [cx, n.y + n.h];
-    if (side === 'left')   return [n.x, cy];
-    if (side === 'right')  return [n.x + n.w, cy];
+    if (side === 'top')              return [cx, n.y];
+    if (side === 'bottom')           return [cx, n.y + n.h];
+    if (side === 'left')             return [n.x, cy];
+    if (side === 'right' || side === 'yes') return [n.x + n.w, cy];
     return [cx, n.y + n.h]; // default bottom
   }
 
@@ -1753,33 +1756,35 @@ function renderFlowchartSVG(graph, activeNodeId) {
 
     let d;
     if (e.isBack) {
-      // Back edge: go down a bit, then curve left, then up to condition left side
-      const midX = Math.min(from.x, to.x) - 36;
-      d = `M${fx},${fy} L${fx},${fy+16} L${midX},${fy+16} L${midX},${ty} L${tx},${ty}`;
+      // Back edge (loop return): down a bit, left of all shapes, up, then right to diamond left point
+      const midX = Math.min(from.x, to.x) - 40;
+      d = `M${fx},${fy} L${fx},${fy+20} L${midX},${fy+20} L${midX},${ty} L${tx},${ty}`;
     } else if (fromSide === 'yes' || fromSide === 'right') {
-      // Right branch: horizontal then down
-      const midY = (fy + ty) / 2;
+      // TRUE branch: from diamond right point, horizontal to left side of first body node
+      // (fy === ty when first body node is properly aligned with diamond mid-Y)
       d = `M${fx},${fy} L${tx},${fy} L${tx},${ty}`;
+    } else if (Math.abs(fx - tx) < 4) {
+      // Same column: straight vertical line
+      d = `M${fx},${fy} L${tx},${ty}`;
+    } else if (fx > tx) {
+      // Branch column → spine (converging exits): route via right rail to avoid crossing shapes
+      const rightRailX = rightBound + 20;
+      d = `M${fx},${fy} L${rightRailX},${fy} L${rightRailX},${ty} L${tx},${ty}`;
     } else {
-      // Vertical (with mild curve to merge points from different columns)
-      if (Math.abs(fx - tx) < 4) {
-        d = `M${fx},${fy} L${tx},${ty}`;
-      } else {
-        // Converging branch exit → straight line to node
-        const midY = ty - 20;
-        d = `M${fx},${fy} L${fx},${midY} L${tx},${midY} L${tx},${ty}`;
-      }
+      // Spine → branch column (e.g. else body edge): go down on spine then right to branch
+      d = `M${fx},${fy} L${fx},${ty} L${tx},${ty}`;
     }
 
     svgParts.push(`<path class="fc-edge" d="${d}" marker-end="url(#arrow)"/>`);
 
     // Edge labels on diamond exits
     if (from.shape === 'diamond') {
-      if (fromSide === 'yes') {
-        svgParts.push(`<text class="fc-edge-label" x="${fx+4}" y="${fy-4}">TRUE</text>`);
+      if (fromSide === 'yes' || fromSide === 'right') {
+        // Label just above the horizontal segment, right of the diamond right point
+        svgParts.push(`<text class="fc-edge-label" x="${fx+6}" y="${fy-4}">TRUE</text>`);
       } else if (fromSide === 'bottom' || fromSide === 'no') {
-        const labelX = from.x - 32;
-        svgParts.push(`<text class="fc-edge-label" x="${labelX}" y="${fy+14}">FALSE</text>`);
+        // Label to the left of the downward segment
+        svgParts.push(`<text class="fc-edge-label" x="${from.x - 36}" y="${fy+14}">FALSE</text>`);
       }
     }
   }
