@@ -1690,6 +1690,9 @@ function _placeStmt(stmt, prevIds, ls) {
       ls.y  = branchColMaxY;  // start after all TRUE branch bodies in branch column
 
       const elseExits = _placeBlock(stmt.alternate, chainPrevIds, ls);
+      // Mark else edge to arrive at left-center (same as TRUE branches)
+      const elseEdge = ls.edges.slice().reverse().find(e => e.from === chainPrevIds[0] && !e.isBack);
+      if (elseEdge) elseEdge.toSide = 'left';
       const elseBottomY = ls.y;
       allBranchExits.push(...elseExits);
 
