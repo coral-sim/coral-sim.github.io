@@ -1863,7 +1863,7 @@ const SAMPLES = {
   },
   branch: {
     label: 'If/Else Branch',
-    code: `integer score\nscore = Get next input\nif score >= 90\n   Put "A" to output\nelseif score >= 80\n   Put "B" to output\nelseif score >= 70\n   Put "C" to output\nelse\n   Put "F" to output`,
+    code: `integer score\nscore = Get next input\nif score >= 90\n   Put "A" to output\nelseif score >= 80\n   Put "B" to output\nelseif score >= 70\n   Put "C" to output\nelseif score >= 60\n   Put "D" to output\nelse\n   Put "F" to output`,
     inputs: '85'
   },
   while: {
