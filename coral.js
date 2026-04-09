@@ -1770,9 +1770,11 @@ function renderFlowchartSVG(graph, activeNodeId) {
       // Same column: straight vertical line
       d = `M${fx},${fy} L${tx},${ty}`;
     } else if (fx > tx) {
-      // Branch column → spine (converging exits): route via right rail to avoid crossing shapes
+      // Branch column → spine (converging exits): exit from right-center of the branch node,
+      // route via right rail, then drop straight down so arrowhead points into the target's top
+      const [rfx, rfy] = connPt(from, 'right');
       const rightRailX = rightBound + 20;
-      d = `M${fx},${fy} L${rightRailX},${fy} L${rightRailX},${ty} L${tx},${ty}`;
+      d = `M${rfx},${rfy} L${rightRailX},${rfy} L${rightRailX},${ty-20} L${tx},${ty-20} L${tx},${ty}`;
     } else {
       // Spine → branch column (e.g. else body edge): go down on spine then right to branch
       d = `M${fx},${fy} L${fx},${ty} L${tx},${ty}`;
