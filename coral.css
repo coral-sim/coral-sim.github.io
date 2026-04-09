@@ -308,6 +308,7 @@ header h1 {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 280px;
+  grid-template-rows: 1fr;
   min-height: 0;
   overflow: hidden;
 }
@@ -318,6 +319,14 @@ header h1 {
   flex-direction: column;
   overflow: hidden;
   border-right: 1px solid var(--border);
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* ── Flowchart panel shares the same cell as code panel (tab-switched) ── */
+#panel-flowchart {
+  grid-column: 1;
+  grid-row: 1;
 }
 
 #editor-wrap {
@@ -414,6 +423,15 @@ header h1 {
   overflow: auto;
   width: 100%;
   height: 100%;
+  /* Disable ligatures so != stays != not ≠ */
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
+/* Also disable ligatures on the highlight overlay */
+#highlight-overlay {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 
 /* ── Flowchart panel ── */
@@ -424,6 +442,13 @@ header h1 {
   border-right: 1px solid var(--border);
   position: relative;
 }
+
+/* Respect the hidden attribute on tab panels — CSS display rules override browser default */
+#panel-code[hidden],
+#panel-flowchart[hidden] {
+  display: none !important;
+}
+
 
 #flowchart-placeholder {
   position: absolute;
@@ -483,12 +508,14 @@ header h1 {
   stroke: var(--fc-active-stroke) !important;
   stroke-width: 2.5px !important;
 }
-.fc-node-text { font-family: var(--mono); font-size: 11px; fill: var(--fc-text); }
+.fc-node-text { font-family: var(--mono); font-size: 11px; fill: var(--fc-text); font-variant-ligatures: none; }
 .fc-edge { stroke: var(--fc-edge); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
 .fc-edge-label { font-family: var(--sans); font-size: 10px; fill: var(--fc-label); font-weight: 600; }
 
 /* ── Variables panel ── */
 #vars-panel {
+  grid-column: 2;
+  grid-row: 1;
   overflow-y: auto;
   background: var(--surface);
   border-left: 1px solid var(--border);

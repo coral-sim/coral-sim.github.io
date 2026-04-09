@@ -1177,20 +1177,20 @@ function* genExec(node, scope, ctx) {
 
     case 'For': {
       // Init
-      yield { loc: node.initLoc, scope, callStack: ctx.callStack };
+      yield { loc: { line: node.line, part: 'forInit' }, scope, callStack: ctx.callStack };
       const initV = ctx.interp.eval(node.init.value, scope);
       scope.set(node.init.name, ctx.interp.coerce(initV, scope.getType(node.init.name), node.line), node.line);
       let forGuard = 0;
       while (true) {
         // Condition
-        yield { loc: node.condLoc, scope, callStack: ctx.callStack };
+        yield { loc: { line: node.line, part: 'forCond' }, scope, callStack: ctx.callStack };
         if (!ctx.interp.eval(node.condition, scope)) break;
         if (++forGuard > 100000) throw RuntimeError(`Infinite loop`, node.line,
           `Line ${node.line}: For loop ran over 100,000 iterations.`);
         // Body
         yield* genBlock(node.body, scope, ctx);
         // Update
-        yield { loc: node.updateLoc, scope, callStack: ctx.callStack };
+        yield { loc: { line: node.line, part: 'forUpdate' }, scope, callStack: ctx.callStack };
         const updV = ctx.interp.eval(node.update.value, scope);
         scope.set(node.update.name, ctx.interp.coerce(updV, scope.getType(node.update.name), node.line), node.line);
       }
@@ -1425,223 +1425,17 @@ function lexLine(line, lineNum) {
    ============================================================ */
 
 const FC = {
-  VERT_GAP: 28, HORIZ_GAP: 44, NODE_W: 180, NODE_H: 44,
-  DIAMOND_W: 200, DIAMOND_H: 96, INDENT: 60,
-  PARA_SHEAR: 12, OVAL_RX: 22,
-  FONT_SIZE: 11, CHARS_PER_LINE: 24,
+  NODE_W: 160, NODE_H: 40,
+  DIAMOND_W: 180, DIAMOND_H: 80,
+  OVAL_W: 120, OVAL_H: 36,
+  VERT_GAP: 28,
+  BRANCH_OFFSET: 230,  // horizontal offset from main cx to branch cx
+  FONT_SIZE: 11, CHARS_PER_LINE: 22,
+  PARA_SHEAR: 12,
 };
 
 let _nodeId = 0;
 function newNodeId() { return 'fc' + (++_nodeId); }
-
-function buildFlowchartGraph(ast) {
-  _nodeId = 0;
-  const nodes = [], edges = [];
-  const lineToNodeId = new Map();
-
-  const startId = newNodeId();
-  const endId   = newNodeId();
-  nodes.push({ id: startId, shape:'oval',  label:'Start', x:0, y:0, w:FC.NODE_W, h:FC.NODE_H });
-  nodes.push({ id: endId,   shape:'oval',  label:'End',   x:0, y:0, w:FC.NODE_W, h:FC.NODE_H });
-
-  const mainFn = ast.functions[0];
-  const { exitIds } = layoutBlock(mainFn.body, nodes, edges, lineToNodeId, startId, 'bottom');
-
-  for (const eid of exitIds) {
-    edges.push({ from: eid, to: endId, fromSide:'bottom', toSide:'top' });
-  }
-
-  // Run layout
-  const totalWidth = 600;
-  positionNodes(nodes, edges, startId, totalWidth);
-
-  return { nodes, edges, lineToNodeId, startId, endId };
-}
-
-function layoutBlock(stmts, nodes, edges, lineMap, prevId, prevSide) {
-  let currentId = prevId;
-  let currentSide = prevSide;
-  const exitIds = [];
-
-  for (const stmt of stmts) {
-    const result = layoutStmt(stmt, nodes, edges, lineMap, currentId, currentSide);
-    currentId = result.mainExit;
-    currentSide = 'bottom';
-    if (result.extraExits) exitIds.push(...result.extraExits);
-  }
-
-  return { exitIds: currentId ? [currentId, ...exitIds] : exitIds };
-}
-
-function layoutStmt(stmt, nodes, edges, lineMap, prevId, prevSide) {
-  switch (stmt.type) {
-    case 'VarDecl':
-    case 'ArrayDecl': {
-      const id = newNodeId();
-      const label = stmt.type === 'VarDecl'
-        ? `${stmt.dataType} ${stmt.name}`
-        : `${stmt.dataType} array(${stmt.size !== null ? stmt.size : '?'}) ${stmt.name}`;
-      nodes.push({ id, shape:'rect', label, x:0, y:0, w:FC.NODE_W, h:FC.NODE_H, line: stmt.line });
-      lineMap.set(stmt.line, id);
-      edges.push({ from: prevId, to: id, fromSide: prevSide, toSide:'top' });
-      return { mainExit: id };
-    }
-
-    case 'Assign':
-    case 'ArrayAssign':
-    case 'SizeAssign': {
-      const id = newNodeId();
-      const label = stmt.type === 'Assign' ? `${stmt.name} = ${exprText(stmt.value)}`
-        : stmt.type === 'ArrayAssign' ? `${stmt.name}[${exprText(stmt.index)}] = ${exprText(stmt.value)}`
-        : `${stmt.name}.size = ${exprText(stmt.value)}`;
-      nodes.push({ id, shape:'rect', label, x:0, y:0, w:FC.NODE_W, h:FC.NODE_H, line: stmt.line });
-      lineMap.set(stmt.line, id);
-      edges.push({ from: prevId, to: id, fromSide: prevSide, toSide:'top' });
-      return { mainExit: id };
-    }
-
-    case 'Input':
-    case 'ArrayInput':
-    case 'SizeInput': {
-      const id = newNodeId();
-      const label = stmt.type === 'Input' ? `Input: ${stmt.name} = Get next input`
-        : stmt.type === 'ArrayInput' ? `Input: ${stmt.name}[${exprText(stmt.index)}] = Get next input`
-        : `Input: ${stmt.name}.size = Get next input`;
-      nodes.push({ id, shape:'para', label, x:0, y:0, w:FC.NODE_W, h:FC.NODE_H, line: stmt.line });
-      lineMap.set(stmt.line, id);
-      edges.push({ from: prevId, to: id, fromSide: prevSide, toSide:'top' });
-      return { mainExit: id };
-    }
-
-    case 'Put': {
-      const id = newNodeId();
-      const decs = stmt.decimals !== null ? ` with ${stmt.decimals} decimal places` : '';
-      const label = `Output: ${exprText(stmt.expr)}${decs}`;
-      nodes.push({ id, shape:'para', label, x:0, y:0, w:FC.NODE_W, h:FC.NODE_H, line: stmt.line });
-      lineMap.set(stmt.line, id);
-      edges.push({ from: prevId, to: id, fromSide: prevSide, toSide:'top' });
-      return { mainExit: id };
-    }
-
-    case 'ExprStmt': {
-      const id = newNodeId();
-      nodes.push({ id, shape:'rect', label: exprText(stmt.expr), x:0, y:0, w:FC.NODE_W, h:FC.NODE_H, line: stmt.line });
-      lineMap.set(stmt.line, id);
-      edges.push({ from: prevId, to: id, fromSide: prevSide, toSide:'top' });
-      return { mainExit: id };
-    }
-
-    case 'If': {
-      const condId = newNodeId();
-      nodes.push({ id: condId, shape:'diamond', label: exprText(stmt.condition), x:0, y:0, w:FC.DIAMOND_W, h:FC.DIAMOND_H, line: stmt.line });
-      lineMap.set(stmt.line, condId);
-      edges.push({ from: prevId, to: condId, fromSide: prevSide, toSide:'top' });
-
-      // Yes branch
-      const yesResult = layoutBlock(stmt.consequent, nodes, edges, lineMap, condId, 'yes');
-
-      // No branch (elseifs + else)
-      let noResult;
-      if (stmt.elseifs.length > 0) {
-        let curId = condId, curSide = 'no';
-        const allExits = [];
-        for (const ei of stmt.elseifs) {
-          const eiId = newNodeId();
-          nodes.push({ id: eiId, shape:'diamond', label: exprText(ei.cond), x:0, y:0, w:FC.DIAMOND_W, h:FC.DIAMOND_H, line: ei.line });
-          lineMap.set(ei.line, eiId);
-          edges.push({ from: curId, to: eiId, fromSide: curSide, toSide:'top', label: curSide === 'no' ? 'No' : undefined });
-          const brResult = layoutBlock(ei.body, nodes, edges, lineMap, eiId, 'yes');
-          allExits.push(...brResult.exitIds);
-          curId = eiId; curSide = 'no';
-        }
-        if (stmt.alternate) {
-          const elseResult = layoutBlock(stmt.alternate, nodes, edges, lineMap, curId, 'no');
-          noResult = { exitIds: [...allExits, ...elseResult.exitIds] };
-        } else {
-          noResult = { exitIds: [...allExits, curId] };
-        }
-      } else if (stmt.alternate) {
-        noResult = layoutBlock(stmt.alternate, nodes, edges, lineMap, condId, 'no');
-      } else {
-        noResult = { exitIds: [condId] };
-      }
-
-      // Merge node
-      const mergeId = newNodeId();
-      nodes.push({ id: mergeId, shape:'merge', label:'', x:0, y:0, w:4, h:4 });
-      for (const eid of [...yesResult.exitIds, ...noResult.exitIds]) {
-        edges.push({ from: eid, to: mergeId, fromSide:'bottom', toSide:'top' });
-      }
-      return { mainExit: mergeId };
-    }
-
-    case 'While': {
-      const condId = newNodeId();
-      nodes.push({ id: condId, shape:'diamond', label: exprText(stmt.condition), x:0, y:0, w:FC.DIAMOND_W, h:FC.DIAMOND_H, line: stmt.line });
-      lineMap.set(stmt.line, condId);
-      edges.push({ from: prevId, to: condId, fromSide: prevSide, toSide:'top' });
-
-      const bodyResult = layoutBlock(stmt.body, nodes, edges, lineMap, condId, 'yes');
-      // Back edge from body exits to condition
-      for (const eid of bodyResult.exitIds) {
-        edges.push({ from: eid, to: condId, fromSide:'bottom', toSide:'left', isBack: true });
-      }
-      // Exit on No
-      return { mainExit: condId, extraExits: [], _noExit: condId };
-    }
-
-    case 'For': {
-      // Init rect
-      const initId = newNodeId();
-      const initLabel = `${stmt.init.name} = ${exprText(stmt.init.value)}`;
-      nodes.push({ id: initId, shape:'rect', label: initLabel, x:0, y:0, w:FC.NODE_W, h:FC.NODE_H, line: stmt.line });
-      lineMap.set(stmt.line, initId);
-      edges.push({ from: prevId, to: initId, fromSide: prevSide, toSide:'top' });
-
-      // Condition diamond
-      const condId = newNodeId();
-      nodes.push({ id: condId, shape:'diamond', label: exprText(stmt.condition), x:0, y:0, w:FC.DIAMOND_W, h:FC.DIAMOND_H, line: stmt.line });
-      edges.push({ from: initId, to: condId, fromSide:'bottom', toSide:'top' });
-
-      const bodyResult = layoutBlock(stmt.body, nodes, edges, lineMap, condId, 'yes');
-
-      // Update rect
-      const updId = newNodeId();
-      const updLabel = `${stmt.update.name} = ${exprText(stmt.update.value)}`;
-      nodes.push({ id: updId, shape:'rect', label: updLabel, x:0, y:0, w:FC.NODE_W, h:FC.NODE_H, line: stmt.line });
-      for (const eid of bodyResult.exitIds) {
-        edges.push({ from: eid, to: updId, fromSide:'bottom', toSide:'top' });
-      }
-      // Back edge: update → condition
-      edges.push({ from: updId, to: condId, fromSide:'bottom', toSide:'left', isBack: true });
-      // Exit on No from condition
-      return { mainExit: condId, _noExit: condId };
-    }
-
-    default:
-      return { mainExit: prevId };
-  }
-}
-
-// Simple positional layout — top-down, centered
-function positionNodes(nodes, edges, startId, totalW) {
-  // BFS-based placement
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
-  const visited = new Set();
-  const queue = [{ id: startId, x: totalW / 2, y: 40 }];
-  let maxY = 0;
-
-  // We'll do a simple sequential layout instead
-  // Place nodes top-to-bottom in order they were added
-  let y = 40;
-  for (const n of nodes) {
-    if (n.shape === 'merge') { n.x = totalW / 2; n.y = y; y += 10; continue; }
-    n.x = totalW / 2 - n.w / 2;
-    n.y = y;
-    y += n.h + FC.VERT_GAP;
-    maxY = y;
-  }
-}
 
 function exprText(node) {
   if (!node) return '';
@@ -1657,52 +1451,341 @@ function exprText(node) {
   }
 }
 
+/*
+  Layout strategy:
+  - Main spine nodes sit centered at `ls.cx` stacking top-to-bottom.
+  - Branch bodies (True/loop) are placed at `ls.cx + BRANCH_OFFSET`.
+  - placeBlock() accepts and returns arrays of "previous IDs" (multi-exit support for If).
+  - Positions are computed in a single recursive pass while building the graph.
+*/
+
+function buildFlowchartGraph(ast) {
+  _nodeId = 0;
+
+  // Layout state (mutated during traversal)
+  const ls = {
+    cx: 200,       // current center-x of the spine
+    y:  30,        // current top-y of next node on the spine
+    nodes: [],
+    edges: [],
+    lineToNodeId: new Map(),
+    forCondMap: new Map(),   // line → For condition diamond id
+    forUpdateMap: new Map(), // line → For update rect id
+  };
+
+  // Start oval
+  const startId = newNodeId();
+  _placeNode(ls, startId, 'oval', 'Start', FC.OVAL_W, FC.OVAL_H, null);
+  ls.edges.push({ from: '__entry__', to: startId }); // placeholder removed below
+
+  const mainFn = ast.functions[0];
+  let prevIds = [startId];
+  prevIds = _placeBlock(mainFn.body, prevIds, ls);
+
+  // End oval
+  const endId = newNodeId();
+  _placeNode(ls, endId, 'oval', 'End', FC.OVAL_W, FC.OVAL_H, null);
+  for (const pid of prevIds) {
+    ls.edges.push({ from: pid, to: endId, fromSide:'bottom', toSide:'top' });
+  }
+
+  // Remove placeholder
+  ls.edges = ls.edges.filter(e => e.from !== '__entry__');
+
+  return {
+    nodes: ls.nodes,
+    edges: ls.edges,
+    lineToNodeId: ls.lineToNodeId,
+    forCondMap: ls.forCondMap,
+    forUpdateMap: ls.forUpdateMap,
+    startId, endId,
+  };
+}
+
+// Place a node at current ls.cx, ls.y — advances ls.y
+function _placeNode(ls, id, shape, label, w, h, line) {
+  const n = { id, shape, label, w, h, x: ls.cx - w / 2, y: ls.y, line };
+  ls.nodes.push(n);
+  if (line !== null && line !== undefined) ls.lineToNodeId.set(line, id);
+  ls.y += h + FC.VERT_GAP;
+  return n;
+}
+
+// Place a node at an explicit cx (branch column) without touching ls.y
+function _placeNodeAt(ls, id, shape, label, w, h, cx, y, line) {
+  const n = { id, shape, label, w, h, x: cx - w / 2, y, line };
+  ls.nodes.push(n);
+  if (line !== null && line !== undefined) ls.lineToNodeId.set(line, id);
+  return n;
+}
+
+// placeBlock: places a sequence of statements.
+// prevIds: array of IDs to connect from (supports multi-exit from If).
+// Returns array of exit IDs.
+function _placeBlock(stmts, prevIds, ls) {
+  let currentIds = prevIds;
+  for (const stmt of stmts) {
+    currentIds = _placeStmt(stmt, currentIds, ls);
+  }
+  return currentIds;
+}
+
+function _placeStmt(stmt, prevIds, ls) {
+  const mainCx = ls.cx;
+
+  // ── Simple linear nodes ──
+  const simpleTypes = {
+    VarDecl:    (s) => s.dataType + ' ' + s.name,
+    ArrayDecl:  (s) => `${s.dataType} array(${s.size !== null ? s.size : '?'}) ${s.name}`,
+    Assign:     (s) => `${s.name} = ${exprText(s.value)}`,
+    ArrayAssign:(s) => `${s.name}[${exprText(s.index)}] = ${exprText(s.value)}`,
+    SizeAssign: (s) => `${s.name}.size = ${exprText(s.value)}`,
+    Input:      (s) => `${s.name} = Get next input`,
+    ArrayInput: (s) => `${s.name}[${exprText(s.index)}] = Get next input`,
+    SizeInput:  (s) => `${s.name}.size = Get next input`,
+    Put:        (s) => `Put ${exprText(s.expr)}${s.decimals !== null ? ` with ${s.decimals} decimal places` : ''} to output`,
+    ExprStmt:   (s) => exprText(s.expr),
+  };
+  const shapeFor = { Input:'para', ArrayInput:'para', SizeInput:'para', Put:'para' };
+
+  if (simpleTypes[stmt.type]) {
+    const id  = newNodeId();
+    const lbl = simpleTypes[stmt.type](stmt);
+    const shp = shapeFor[stmt.type] || 'rect';
+    _placeNode(ls, id, shp, lbl, FC.NODE_W, FC.NODE_H, stmt.line);
+    for (const pid of prevIds) ls.edges.push({ from: pid, to: id, fromSide:'bottom', toSide:'top' });
+    return [id];
+  }
+
+  // ── While ──
+  if (stmt.type === 'While') {
+    const condId = newNodeId();
+    _placeNode(ls, condId, 'diamond', exprText(stmt.condition), FC.DIAMOND_W, FC.DIAMOND_H, stmt.line);
+    const condNode = ls.nodes.find(n => n.id === condId);
+    const condTopY = condNode.y;
+    const afterCondY = ls.y;  // where FALSE exit continues
+
+    for (const pid of prevIds) ls.edges.push({ from: pid, to: condId, fromSide:'bottom', toSide:'top' });
+
+    // Body in branch column
+    const branchCx = mainCx + FC.BRANCH_OFFSET;
+    const savedCx = ls.cx, savedY = ls.y;
+    ls.cx = branchCx;
+    ls.y  = condTopY;  // body starts level with top of diamond
+
+    const bodyExits = _placeBlock(stmt.body, [condId], ls);
+    const bodyBottomY = ls.y;
+
+    ls.cx = savedCx;
+    ls.y  = Math.max(afterCondY, bodyBottomY);
+
+    // Back edges from body exits to condition
+    for (const eid of bodyExits) {
+      ls.edges.push({ from: eid, to: condId, fromSide:'bottom', toSide:'left', isBack: true });
+    }
+    // Mark the cond→body edge as 'yes' (right side of diamond)
+    _markFirstForwardEdge(ls.edges, condId, 'yes');
+
+    return [condId]; // FALSE exit = bottom of diamond
+  }
+
+  // ── For ──
+  if (stmt.type === 'For') {
+    // Init rect on spine
+    const initId = newNodeId();
+    _placeNode(ls, initId, 'rect', `${stmt.init.name} = ${exprText(stmt.init.value)}`, FC.NODE_W, FC.NODE_H, stmt.line);
+    for (const pid of prevIds) ls.edges.push({ from: pid, to: initId, fromSide:'bottom', toSide:'top' });
+    ls.lineToNodeId.set(stmt.line, initId); // init shown for first step
+
+    // Condition diamond on spine
+    const condId = newNodeId();
+    _placeNode(ls, condId, 'diamond', exprText(stmt.condition), FC.DIAMOND_W, FC.DIAMOND_H, null);
+    ls.forCondMap.set(stmt.line, condId);
+    ls.edges.push({ from: initId, to: condId, fromSide:'bottom', toSide:'top' });
+    const condNode = ls.nodes.find(n => n.id === condId);
+    const condTopY = condNode.y;
+    const afterCondY = ls.y;
+
+    // Body in branch column
+    const branchCx = mainCx + FC.BRANCH_OFFSET;
+    const savedCx = ls.cx, savedY = ls.y;
+    ls.cx = branchCx;
+    ls.y  = condTopY;
+
+    const bodyExits = _placeBlock(stmt.body, [condId], ls);
+
+    // Update rect in branch column, below body
+    const updId = newNodeId();
+    const updN = _placeNodeAt(ls, updId, 'rect',
+      `${stmt.update.name} = ${exprText(stmt.update.value)}`,
+      FC.NODE_W, FC.NODE_H, branchCx, ls.y, null);
+    ls.forUpdateMap.set(stmt.line, updId);
+    for (const eid of bodyExits) ls.edges.push({ from: eid, to: updId, fromSide:'bottom', toSide:'top' });
+    const branchBottomY = ls.y + FC.NODE_H + FC.VERT_GAP;
+
+    ls.cx = savedCx;
+    ls.y  = Math.max(afterCondY, branchBottomY);
+
+    // Back edge: update → condition (left side)
+    ls.edges.push({ from: updId, to: condId, fromSide:'bottom', toSide:'left', isBack: true });
+
+    // Mark cond→body edge as 'yes'
+    _markFirstForwardEdge(ls.edges, condId, 'yes');
+
+    return [condId]; // FALSE exit
+  }
+
+  // ── If / elseif / else ──
+  if (stmt.type === 'If') {
+    // Build the full chain: if → [elseif...] → [else]
+    const branches = [
+      { cond: stmt.condition, body: stmt.consequent, line: stmt.line },
+      ...stmt.elseifs.map(ei => ({ cond: ei.cond, body: ei.body, line: ei.line })),
+    ];
+
+    let chainPrevIds = prevIds;
+    const allBranchExits = [];  // exits from all true-bodies
+    let lastCondId = null;
+
+    for (const branch of branches) {
+      const condId = newNodeId();
+      _placeNode(ls, condId, 'diamond', exprText(branch.cond), FC.DIAMOND_W, FC.DIAMOND_H, branch.line);
+      const condNode = ls.nodes.find(n => n.id === condId);
+      const condTopY = condNode.y;
+      const afterCondY = ls.y;
+
+      for (const pid of chainPrevIds) ls.edges.push({ from: pid, to: condId, fromSide:'bottom', toSide:'top' });
+
+      // TRUE body in branch column
+      const branchCx = mainCx + FC.BRANCH_OFFSET;
+      const savedCx = ls.cx, savedY = ls.y;
+      ls.cx = branchCx;
+      ls.y  = condTopY;
+
+      const trueExits = _placeBlock(branch.body, [condId], ls);
+      const branchBottomY = ls.y;
+      allBranchExits.push(...trueExits);
+
+      ls.cx = savedCx;
+      ls.y  = Math.max(afterCondY, branchBottomY);
+
+      // Mark cond→true body edge as 'yes'
+      _markFirstForwardEdge(ls.edges, condId, 'yes');
+
+      // The FALSE path from this condition leads to the next elseif/else/merge
+      chainPrevIds = [condId]; // condId FALSE exit feeds next condition
+      lastCondId = condId;
+    }
+
+    // Else body or pass-through
+    if (stmt.alternate) {
+      // Else body in branch column at current position
+      const branchCx = mainCx + FC.BRANCH_OFFSET;
+      const savedCx = ls.cx, savedY = ls.y;
+      ls.cx = branchCx;
+      // Find the last condition node's y to align else body
+      const lastCondNode = ls.nodes.find(n => n.id === lastCondId);
+      ls.y = lastCondNode ? lastCondNode.y : ls.y;
+
+      const elseExits = _placeBlock(stmt.alternate, chainPrevIds, ls);
+      const elseBottomY = ls.y;
+      allBranchExits.push(...elseExits);
+
+      ls.cx = savedCx;
+      ls.y  = Math.max(savedY, elseBottomY);
+    } else {
+      // No else: FALSE exit of last condition is also an exit
+      allBranchExits.push(lastCondId);
+    }
+
+    // All exits from all branches converge → returned as multi-exit
+    return allBranchExits;
+  }
+
+  return prevIds;
+}
+
+function _markFirstForwardEdge(edges, fromId, side) {
+  const e = edges.find(e => e.from === fromId && !e.isBack);
+  if (e) e.fromSide = side;
+}
+
 function renderFlowchartSVG(graph, activeNodeId) {
   const { nodes, edges } = graph;
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-  const maxX = Math.max(...nodes.map(n => n.x + n.w)) + 60;
-  const maxY = Math.max(...nodes.map(n => n.y + n.h)) + 60;
+  const visibleNodes = nodes.filter(n => n.shape !== 'merge');
+  if (visibleNodes.length === 0) return '<svg></svg>';
+
+  const pad = 60;
+  const maxX = Math.max(...visibleNodes.map(n => n.x + n.w)) + pad;
+  const maxY = Math.max(...visibleNodes.map(n => n.y + n.h)) + pad;
 
   const svgParts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${maxX}" height="${maxY}" viewBox="0 0 ${maxX} ${maxY}">`,
-    `<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">`,
-    `<path d="M0,0 L0,6 L8,3 z" fill="var(--fc-arrow)"/></marker></defs>`,
+    `<defs>`,
+    `<marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">`,
+    `<path d="M0,0 L0,6 L8,3 z" fill="var(--fc-arrow)"/></marker>`,
+    `</defs>`,
   ];
 
-  // Edges
+  // Helper: get connection point on a node
+  function connPt(n, side) {
+    const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+    if (side === 'top')    return [cx, n.y];
+    if (side === 'bottom') return [cx, n.y + n.h];
+    if (side === 'left')   return [n.x, cy];
+    if (side === 'right')  return [n.x + n.w, cy];
+    return [cx, n.y + n.h]; // default bottom
+  }
+
+  // Draw edges
   for (const e of edges) {
     const from = nodeMap.get(e.from);
     const to   = nodeMap.get(e.to);
     if (!from || !to) continue;
     if (from.shape === 'merge' || to.shape === 'merge') continue;
 
-    const fx = from.x + from.w / 2;
-    const fy = from.y + from.h;
-    const tx = to.x + to.w / 2;
-    const ty = to.y;
+    const fromSide = e.fromSide || 'bottom';
+    const toSide   = e.toSide   || 'top';
+    const [fx, fy] = connPt(from, fromSide);
+    const [tx, ty] = connPt(to, toSide);
 
+    let d;
     if (e.isBack) {
-      // Back edge curves left
-      const lx = Math.min(from.x, to.x) - 30;
-      svgParts.push(`<path class="fc-edge" d="M${fx},${fy} C${fx},${fy+20} ${lx},${fy+20} ${lx},${(fy+ty)/2} C${lx},${ty-20} ${tx-30},${ty-20} ${tx},${ty}" marker-end="url(#arrow)"/>`);
+      // Back edge: go down a bit, then curve left, then up to condition left side
+      const midX = Math.min(from.x, to.x) - 36;
+      d = `M${fx},${fy} L${fx},${fy+16} L${midX},${fy+16} L${midX},${ty} L${tx},${ty}`;
+    } else if (fromSide === 'yes' || fromSide === 'right') {
+      // Right branch: horizontal then down
+      const midY = (fy + ty) / 2;
+      d = `M${fx},${fy} L${tx},${fy} L${tx},${ty}`;
     } else {
-      svgParts.push(`<path class="fc-edge" d="M${fx},${fy} C${fx},${(fy+ty)/2} ${tx},${(fy+ty)/2} ${tx},${ty}" marker-end="url(#arrow)"/>`);
+      // Vertical (with mild curve to merge points from different columns)
+      if (Math.abs(fx - tx) < 4) {
+        d = `M${fx},${fy} L${tx},${ty}`;
+      } else {
+        // Converging branch exit → straight line to node
+        const midY = ty - 20;
+        d = `M${fx},${fy} L${fx},${midY} L${tx},${midY} L${tx},${ty}`;
+      }
     }
 
-    // Edge labels (Yes/No on diamonds)
+    svgParts.push(`<path class="fc-edge" d="${d}" marker-end="url(#arrow)"/>`);
+
+    // Edge labels on diamond exits
     if (from.shape === 'diamond') {
-      if (e.fromSide === 'yes') {
-        svgParts.push(`<text class="fc-edge-label" x="${fx+6}" y="${fy+14}">Yes</text>`);
-      } else if (e.fromSide === 'no') {
-        svgParts.push(`<text class="fc-edge-label" x="${from.x+from.w+4}" y="${from.y+from.h/2+4}">No</text>`);
+      if (fromSide === 'yes') {
+        svgParts.push(`<text class="fc-edge-label" x="${fx+4}" y="${fy-4}">TRUE</text>`);
+      } else if (fromSide === 'bottom' || fromSide === 'no') {
+        const labelX = from.x - 32;
+        svgParts.push(`<text class="fc-edge-label" x="${labelX}" y="${fy+14}">FALSE</text>`);
       }
     }
   }
 
-  // Nodes
-  for (const n of nodes) {
-    if (n.shape === 'merge') continue;
+  // Draw nodes
+  for (const n of visibleNodes) {
     const active = n.id === activeNodeId;
     const cls = `fc-node${active ? ' fc-active' : ''}`;
     const cx = n.x + n.w / 2;
@@ -1713,7 +1796,7 @@ function renderFlowchartSVG(graph, activeNodeId) {
     if (n.shape === 'oval') {
       shape = `<ellipse class="fc-shape" cx="${cx}" cy="${cy}" rx="${n.w/2}" ry="${n.h/2}" fill="var(--fc-oval)" stroke="var(--fc-border)" stroke-width="1.5"/>`;
     } else if (n.shape === 'rect') {
-      shape = `<rect class="fc-shape" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="var(--fc-rect)" stroke="var(--fc-border)" stroke-width="1.5"/>`;
+      shape = `<rect class="fc-shape" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="4" fill="var(--fc-rect)" stroke="var(--fc-border)" stroke-width="1.5"/>`;
     } else if (n.shape === 'para') {
       const s = FC.PARA_SHEAR;
       const pts = `${n.x+s},${n.y} ${n.x+n.w+s},${n.y} ${n.x+n.w},${n.y+n.h} ${n.x},${n.y+n.h}`;
@@ -1723,20 +1806,17 @@ function renderFlowchartSVG(graph, activeNodeId) {
       shape = `<polygon class="fc-shape" points="${pts}" fill="var(--fc-diamond)" stroke="var(--fc-border)" stroke-width="1.5"/>`;
     }
 
-    const lineHeight = FC.FONT_SIZE * 1.4;
-    const totalTH = lines.length * lineHeight;
-    const startY = cy - totalTH / 2 + FC.FONT_SIZE * 0.85;
-    const textLines = lines.map((l, i) =>
+    const lineHeight = FC.FONT_SIZE * 1.45;
+    const totalH = lines.length * lineHeight;
+    const textY = cy - totalH / 2 + FC.FONT_SIZE * 0.85;
+    const tspans = lines.map((l, i) =>
       `<tspan x="${cx}" dy="${i === 0 ? 0 : lineHeight}">${escHtml(l)}</tspan>`).join('');
 
-    svgParts.push(`<g class="${cls}" id="${n.id}">
-      ${shape}
-      <text class="fc-node-text" x="${cx}" y="${startY}" text-anchor="middle">${textLines}</text>
-    </g>`);
+    svgParts.push(`<g class="${cls}" id="${n.id}">${shape}<text class="fc-node-text" x="${cx}" y="${textY}" text-anchor="middle">${tspans}</text></g>`);
   }
 
   svgParts.push('</svg>');
-  return svgParts.join('\n');
+  return svgParts.join('');
 }
 
 function wrapText(text, charsPerLine) {
@@ -1746,11 +1826,8 @@ function wrapText(text, charsPerLine) {
   const lines = [];
   let cur = '';
   for (const w of words) {
-    if (cur && (cur + ' ' + w).length > charsPerLine) {
-      lines.push(cur); cur = w;
-    } else {
-      cur = cur ? cur + ' ' + w : w;
-    }
+    if (cur && (cur + ' ' + w).length > charsPerLine) { lines.push(cur); cur = w; }
+    else { cur = cur ? cur + ' ' + w : w; }
   }
   if (cur) lines.push(cur);
   return lines;
@@ -1816,6 +1893,7 @@ const statusDetail   = document.getElementById('status-detail');
 const statusStep     = document.getElementById('status-step');
 const btnExecuteEdit = document.getElementById('btn-execute-edit');
 const btnStep        = document.getElementById('btn-step');
+const btnRestart     = document.getElementById('btn-restart');
 const btnRunPause    = document.getElementById('btn-run-pause');
 const speedSlider    = document.getElementById('speed-slider');
 const btnInstant     = document.getElementById('btn-instant');
@@ -1848,6 +1926,8 @@ let genInputQueue = [];
 let ast = null;
 let flowchartGraph = null;
 let lineToNodeId = new Map();
+let forCondMap   = new Map();
+let forUpdateMap = new Map();
 let stepIndex = 0;
 let runTimer = null;
 let outputLineCount = 0;
@@ -1871,6 +1951,7 @@ function setState(newState) {
   btnExecuteEdit.setAttribute('aria-label', isEdit ? 'Execute program' : 'Return to edit mode');
 
   btnStep.disabled = !(isReady || isPaused);
+  btnRestart.disabled = isEdit;
   btnRunPause.disabled = isEdit || isComplete;
   btnRunPause.textContent = isRunning ? 'Pause' : 'Run';
   btnRunPause.setAttribute('aria-pressed', isRunning ? 'true' : 'false');
@@ -1945,21 +2026,45 @@ btnExecuteEdit.addEventListener('click', () => {
   if (!ast.hasFunctions) {
     try {
       flowchartGraph = buildFlowchartGraph(ast);
-      lineToNodeId = flowchartGraph.lineToNodeId;
+      lineToNodeId   = flowchartGraph.lineToNodeId;
+      forCondMap     = flowchartGraph.forCondMap;
+      forUpdateMap   = flowchartGraph.forUpdateMap;
       fcPlaceholder.style.display = 'none';
     } catch(e) {
       flowchartGraph = null;
       lineToNodeId = new Map();
+      forCondMap   = new Map();
+      forUpdateMap = new Map();
     }
   } else {
     flowchartGraph = null;
     lineToNodeId = new Map();
+    forCondMap   = new Map();
+    forUpdateMap = new Map();
     fcPlaceholder.style.display = 'flex';
     fcPlaceholder.textContent = 'Flowchart not available for programs with user-defined functions.';
   }
 
   if (activeTab === 'flowchart') renderFlowchart(null);
 
+  setState(STATE.READY);
+});
+
+// ── Restart ──
+btnRestart.addEventListener('click', () => {
+  if (!ast) return;
+  if (runTimer) { clearInterval(runTimer); runTimer = null; }
+  genOutput = [];
+  outputLineCount = 0;
+  currentOutputLine = null;
+  clearOutput();
+  clearVars();
+  clearActiveLineHighlight();
+  if (activeTab === 'flowchart') renderFlowchart(null);
+
+  genInputQueue = inputTextarea.value.trim().split(/\s+/).filter(Boolean);
+  stepIndex = 0;
+  currentGenerator = genProgram(ast, genInputQueue, genOutput);
   setState(STATE.READY);
 });
 
@@ -1972,6 +2077,8 @@ function exitToEdit() {
   ast = null;
   flowchartGraph = null;
   lineToNodeId = new Map();
+  forCondMap   = new Map();
+  forUpdateMap = new Map();
   clearOutput();
   clearVars();
   clearFlowchart();
@@ -2005,7 +2112,7 @@ function applyStep(yieldValue) {
   const { loc, scope, callStack } = yieldValue;
   if (loc) {
     highlightEditorLine(loc.line);
-    syncFlowchartHighlight(loc.line);
+    syncFlowchartHighlight(loc.line, loc.part);
   } else {
     clearActiveLineHighlight();
   }
@@ -2203,9 +2310,7 @@ function renderVarsTable(callStack) {
     const type = entry.declaredType;
 
     let valueCell;
-    if (!initialized && !(val instanceof CoralArray)) {
-      valueCell = `<td class="var-uninit">\u2014</td>`;
-    } else if (val instanceof CoralArray) {
+    if (val instanceof CoralArray) {
       valueCell = `<td>${renderArraySubTable(val, name)}</td>`;
     } else {
       const cls = type === 'float' ? 'var-float' : 'var-int';
@@ -2277,9 +2382,12 @@ function renderFlowchart(activeNodeId) {
   updateFcTransform();
 }
 
-function syncFlowchartHighlight(lineNum) {
+function syncFlowchartHighlight(lineNum, part) {
   if (activeTab !== 'flowchart' || !flowchartGraph) return;
-  const nodeId = lineToNodeId.get(lineNum);
+  let nodeId;
+  if (part === 'forCond')   nodeId = forCondMap.get(lineNum);
+  else if (part === 'forUpdate') nodeId = forUpdateMap.get(lineNum);
+  else                      nodeId = lineToNodeId.get(lineNum);
   renderFlowchart(nodeId || null);
 }
 
