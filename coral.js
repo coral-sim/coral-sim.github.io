@@ -1110,7 +1110,13 @@ function* genExec(node, scope, ctx) {
 
     case 'Assign': {
       yield { loc: { line: node.line }, scope, callStack: ctx.callStack };
-      const rawVal = ctx.interp.eval(node.value, scope);
+      let rawVal;
+      if (node.value.type === 'Call' && ctx.functions.has(node.value.name)) {
+        const res = yield* genCall(node.value, scope, ctx);
+        rawVal = res.val;
+      } else {
+        rawVal = ctx.interp.eval(node.value, scope);
+      }
       const declType = scope.getType(node.name);
       scope.set(node.name, ctx.interp.coerce(rawVal, declType, node.line), node.line);
       break;
@@ -1120,7 +1126,13 @@ function* genExec(node, scope, ctx) {
       yield { loc: { line: node.line }, scope, callStack: ctx.callStack };
       const arr = scope.get(node.name, node.line);
       const idx = Math.trunc(ctx.interp.eval(node.index, scope));
-      const rawVal = ctx.interp.eval(node.value, scope);
+      let rawVal;
+      if (node.value.type === 'Call' && ctx.functions.has(node.value.name)) {
+        const res = yield* genCall(node.value, scope, ctx);
+        rawVal = res.val;
+      } else {
+        rawVal = ctx.interp.eval(node.value, scope);
+      }
       arr.set(idx, ctx.interp.coerce(rawVal, arr.dataType, node.line), node.line);
       break;
     }
@@ -2132,10 +2144,19 @@ function applyStep(yieldValue) {
   renderVarsTable(callStack);
   stepIndex++;
   statusStep.textContent = `Step ${stepIndex}`;
+
+  // Show which function is currently executing in the status bar detail
+  if (callStack && callStack.length > 1) {
+    const frame = callStack[callStack.length - 1];
+    statusDetail.textContent = `in ${escHtml(frame.label)}`;
+  } else {
+    statusDetail.textContent = '';
+  }
 }
 
 function finishExecution() {
   clearActiveLineHighlight();
+  statusDetail.textContent = '';
   setState(STATE.COMPLETE);
   if (runTimer) { clearInterval(runTimer); runTimer = null; }
   // Highlight the End node in the flowchart so students know execution is done
@@ -2341,8 +2362,19 @@ function renderVarsTable(callStack) {
 
   // Build DOM
   varsTbody.innerHTML = '';
+
+  // Show frame label header when inside a called function
+  if (callStack.length > 1) {
+    const labelTr = document.createElement('tr');
+    labelTr.className = 'vars-frame-label';
+    labelTr.innerHTML = `<td colspan="3">${escHtml(frame.label)}</td>`;
+    varsTbody.appendChild(labelTr);
+  }
+
   if (rows.length === 0) {
-    varsTbody.innerHTML = '<tr id="vars-empty-row"><td colspan="3" class="vars-empty">No variables yet</td></tr>';
+    const emptyTr = document.createElement('tr');
+    emptyTr.innerHTML = '<td colspan="3" class="vars-empty">No variables yet</td>';
+    varsTbody.appendChild(emptyTr);
     return;
   }
 
