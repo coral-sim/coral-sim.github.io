@@ -1246,6 +1246,10 @@ function* genCall(callNode, scope, ctx) {
 
   yield* genBlock(fn.body, fnScope, ctx);
 
+  // Extra yield so students can see the final variable state (including return value)
+  // while still inside the function, before control returns to the caller.
+  yield { loc: { line: fn.line, part: 'returning' }, scope: fnScope, callStack: ctx.callStack };
+
   ctx.callStack.pop();
   ctx.callDepth--;
 
@@ -2149,7 +2153,11 @@ function applyStep(yieldValue) {
   // Show which function is currently executing in the status bar detail
   if (callStack && callStack.length > 1) {
     const frame = callStack[callStack.length - 1];
-    statusDetail.textContent = `in ${escHtml(frame.label)}`;
+    if (loc && loc.part === 'returning') {
+      statusDetail.textContent = `returning from ${escHtml(frame.label)}`;
+    } else {
+      statusDetail.textContent = `in ${escHtml(frame.label)}`;
+    }
   } else {
     statusDetail.textContent = '';
   }
