@@ -32,7 +32,7 @@
   --hl-builtin:  #34d399;
   --hl-string:   #fbbf24;
   --hl-number:   #f97316;
-  --hl-comment:  #6b7280;
+  --hl-comment:  #9ca3af; /* lightened from #6b7280 — was 3.50:1, now ~8.6:1 on dark bg (WCAG 1.4.3) */
   --hl-operator: #7ee8a2;
 
   /* Flowchart colors */
@@ -64,10 +64,10 @@ html.light {
   --accent:       #1d4ed8;
   --accent2:      #16a34a;
   --error:        #dc2626;
-  --warn:         #d97706;
+  --warn:         #b45309; /* darkened from #d97706 — was 3.02:1 on white, now 5.02:1 (WCAG 1.4.3) */
 
   --step-bg:          rgba(255,243,176,0.6);
-  --step-border:      #d4a017;
+  --step-border:      #b45309; /* darkened from #d4a017 — was 2.25:1 on bg, now 4.76:1 (WCAG 1.4.11) */
   --step-gutter-bg:   #fbbf24;
   --step-gutter-fg:   #1e293b;
 
@@ -86,10 +86,10 @@ html.light {
   --fc-border:   #1d4ed8;
   --fc-text:     #1e293b;
   --fc-active-fill:   rgba(255,243,176,0.8);
-  --fc-active-stroke: #d4a017;
+  --fc-active-stroke: #c2410c; /* darkened from #d4a017 — was 2.25:1 on bg/2.25 on fills, now 3.07:1 (WCAG 1.4.11) */
   --fc-edge:     #4b5563;
   --fc-arrow:    #4b5563;
-  --fc-label:    #d97706;
+  --fc-label:    #b45309; /* darkened from #d97706 — was 3.02:1 on bg, now 4.76:1 (WCAG 1.4.3) */
 }
 
 /* ── Accessibility utilities ── */
@@ -97,6 +97,29 @@ html.light {
   position: absolute; width: 1px; height: 1px;
   padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* Skip navigation link (WCAG 2.4.1 — Bypass Blocks) */
+.skip-link {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  text-decoration: none;
+}
+.skip-link:focus {
+  position: fixed;
+  top: 8px; left: 8px;
+  z-index: 9999;
+  width: auto; height: auto;
+  clip: auto;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  font-weight: 600;
+  outline: 3px solid var(--bg);
+  outline-offset: 2px;
 }
 
 /* ── Page layout ── */
@@ -266,7 +289,7 @@ header h1 {
   overflow: hidden;
 }
 
-#input-textarea::placeholder { color: var(--muted); opacity: 0.7; }
+#input-textarea::placeholder { color: var(--muted); } /* opacity removed — 0.7 opacity caused 4.23:1 failure (WCAG 1.4.3) */
 
 /* ── Tab bar ── */
 #tab-bar {
@@ -771,7 +794,7 @@ input[type="range"] {
   outline: none;
   cursor: pointer;
   width: 100px;
-  min-height: 20px;
+  min-height: 24px; /* raised from 20px to meet WCAG 2.5.8 24px minimum target size */
   border: none;
 }
 
@@ -967,4 +990,17 @@ a:focus-visible {
   #toolbar { gap: 4px; padding: 4px 8px; }
   button { padding: 4px 10px; font-size: 0.78rem; min-height: 32px; }
   select { padding: 4px 8px; font-size: 0.78rem; min-height: 32px; }
+}
+
+/* ── Reduced motion (WCAG 2.3.3 / user preference) ── */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable variable flash animation */
+  .vars-section-table tr.flashing td,
+  .array-subtable tr.flashing td {
+    animation: none;
+  }
+  /* Disable button/tab hover transitions */
+  button, select, #tab-bar [role="tab"], #status-indicator {
+    transition: none;
+  }
 }
