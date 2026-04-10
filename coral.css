@@ -538,16 +538,48 @@ header h1 {
   z-index: 1;
 }
 
-#vars-table {
+#vars-fn-name {
+  padding: 5px 10px 4px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent2);
+  background: color-mix(in srgb, var(--accent2) 12%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--accent2) 40%, transparent);
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+/* Container: stacks tables with background-coloured gap between them */
+#vars-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.vars-section-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.78rem;
   font-family: var(--mono);
 }
 
-#vars-table th {
-  position: sticky;
-  top: 33px;
+/* Section caption (Parameters / Local Variables / Return) */
+.vars-section-table caption {
+  text-align: left;
+  padding: 5px 8px 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+}
+.vars-table-params caption { color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); border-left: 3px solid var(--accent); }
+.vars-table-locals caption { color: var(--muted);  background: color-mix(in srgb, var(--muted)  6%, transparent); border-left: 3px solid var(--border); }
+.vars-table-return caption { color: var(--warn);   background: color-mix(in srgb, var(--warn)   8%, transparent); border-left: 3px solid var(--warn); }
+
+.vars-section-table th {
   background: var(--surface);
   padding: 4px 8px;
   text-align: left;
@@ -558,17 +590,16 @@ header h1 {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  z-index: 1;
 }
 
-#vars-table td {
+.vars-section-table td {
   padding: 3px 8px;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   vertical-align: top;
   word-break: break-all;
 }
 
-#vars-table tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.vars-section-table tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
 .vars-empty {
   color: var(--muted);
@@ -586,44 +617,6 @@ header h1 {
 .var-float { color: var(--warn); }
 .var-str   { color: var(--hl-string); }
 
-/* Function title row (function name when inside a called function) */
-.vars-fn-title td {
-  padding: 5px 8px 3px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--accent2);
-  background: color-mix(in srgb, var(--accent2) 12%, transparent);
-  border-bottom: 2px solid color-mix(in srgb, var(--accent2) 40%, transparent);
-  font-family: var(--mono);
-  letter-spacing: 0.02em;
-}
-
-/* Section header rows: Parameters / Local Variables / Return */
-.vars-section-hdr td {
-  padding: 3px 8px 2px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid transparent;
-}
-.vars-section-params td  { color: var(--accent);  background: color-mix(in srgb, var(--accent)  8%, transparent); border-left-color: var(--accent); }
-.vars-section-locals td  { color: var(--muted);   background: color-mix(in srgb, var(--muted)   6%, transparent); border-left-color: var(--border); }
-.vars-section-return td  { color: var(--warn);    background: color-mix(in srgb, var(--warn)    8%, transparent); border-left-color: var(--warn); }
-
-/* Data rows get a colored left accent matching their section */
-.vars-row-params td:first-child { border-left: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); }
-.vars-row-return td:first-child  { border-left: 3px solid color-mix(in srgb, var(--warn)   40%, transparent); }
-.vars-row-locals td:first-child  { border-left: 3px solid transparent; }
-
-/* Empty dash row inside a section */
-.vars-empty-dash {
-  color: var(--muted);
-  font-style: italic;
-  padding-left: 16px !important;
-  font-size: 0.8rem;
-}
 
 /* Array sub-table */
 .array-subtable {
@@ -645,7 +638,7 @@ header h1 {
   100% { background-color: transparent; }
 }
 
-#vars-table tr.flashing td,
+.vars-section-table tr.flashing td,
 .array-subtable tr.flashing td {
   animation: var-flash 600ms ease-out forwards;
 }

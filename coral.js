@@ -1911,7 +1911,8 @@ const gutter         = document.getElementById('gutter');
 const activeLineDiv  = document.getElementById('active-line-highlight');
 const inputTextarea  = document.getElementById('input-textarea');
 const outputEl       = document.getElementById('output');
-const varsTbody      = document.getElementById('vars-tbody');
+const varsSections   = document.getElementById('vars-sections');
+const varsFnName     = document.getElementById('vars-fn-name');
 const statusBar      = document.getElementById('status-bar');
 const statusState    = document.getElementById('status-state');
 const statusDetail   = document.getElementById('status-detail');
@@ -2341,7 +2342,7 @@ function renderVarsTable(callStack) {
   const vars = frame.scope.allVars();
   const isFunction = callStack.length > 1;
 
-  // Build a flat list of row data for flash detection (keyed by name)
+  // Flat list of all rows for flash detection
   const allRowData = [];
   vars.forEach((entry, name) => {
     const val = entry.value;
@@ -2351,61 +2352,56 @@ function renderVarsTable(callStack) {
     allRowData.push({ name, entry, type, typeDisplay, key });
   });
 
-  varsTbody.innerHTML = '';
+  varsFnName.hidden = !isFunction;
+  varsFnName.textContent = isFunction ? frame.label : '';
+  varsSections.innerHTML = '';
 
   if (isFunction) {
-    // Split into three sections: Parameters, Local Variables, Return
     const paramRows = [], localRows = [], returnRows = [];
     for (const row of allRowData) {
-      if (frame.paramNames.has(row.name))       paramRows.push(row);
-      else if (frame.returnVar === row.name)     returnRows.push(row);
-      else                                       localRows.push(row);
+      if (frame.paramNames.has(row.name))      paramRows.push(row);
+      else if (frame.returnVar === row.name)   returnRows.push(row);
+      else                                     localRows.push(row);
     }
-
-    // Function name title
-    const titleTr = document.createElement('tr');
-    titleTr.className = 'vars-fn-title';
-    titleTr.innerHTML = `<td colspan="3">${escHtml(frame.label)}</td>`;
-    varsTbody.appendChild(titleTr);
-
-    appendVarsSection('Parameters',     paramRows,  'params');
-    appendVarsSection('Local Variables', localRows, 'locals');
-    appendVarsSection('Return',          returnRows, 'return');
+    varsSections.appendChild(buildSectionTable('Parameters',      'params', paramRows));
+    varsSections.appendChild(buildSectionTable('Local Variables', 'locals', localRows));
+    varsSections.appendChild(buildSectionTable('Return',          'return', returnRows));
   } else {
-    // Main: flat list, no section headers
-    if (allRowData.length === 0) {
-      varsTbody.innerHTML = '<tr><td colspan="3" class="vars-empty">No variables yet</td></tr>';
-    } else {
-      for (const row of allRowData) {
-        varsTbody.appendChild(buildVarRow(row, null));
-      }
-    }
+    varsSections.appendChild(buildSectionTable(null, null, allRowData));
   }
 
-  // Update snapshot (across all vars regardless of section)
   prevVarSnapshot = new Map(allRowData.map(r => [r.name, r.key]));
 
-  function appendVarsSection(label, rows, sectionKey) {
-    const hdr = document.createElement('tr');
-    hdr.className = 'vars-section-hdr vars-section-' + sectionKey;
-    hdr.innerHTML = `<td colspan="3">${escHtml(label)}</td>`;
-    varsTbody.appendChild(hdr);
+  function buildSectionTable(label, sectionKey, rows) {
+    const table = document.createElement('table');
+    table.className = 'vars-section-table' + (sectionKey ? ' vars-table-' + sectionKey : '');
 
+    const cap = document.createElement('caption');
+    if (label) {
+      cap.textContent = label;
+    } else {
+      cap.className = 'sr-only';
+      cap.textContent = 'Variables';
+    }
+    table.appendChild(cap);
+
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Value</th></tr>';
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
     if (rows.length === 0) {
-      const emptyTr = document.createElement('tr');
-      emptyTr.className = 'vars-section-empty vars-section-' + sectionKey + '-empty';
-      emptyTr.innerHTML = '<td colspan="3" class="vars-empty vars-empty-dash">&mdash;</td>';
-      varsTbody.appendChild(emptyTr);
-      return;
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="3" class="vars-empty">&mdash;</td>';
+      tbody.appendChild(tr);
+    } else {
+      for (const row of rows) tbody.appendChild(buildVarRow(row));
     }
-
-    for (const row of rows) {
-      const tr = buildVarRow(row, sectionKey);
-      varsTbody.appendChild(tr);
-    }
+    table.appendChild(tbody);
+    return table;
   }
 
-  function buildVarRow(row, sectionKey) {
+  function buildVarRow(row) {
     const { name, entry, type, typeDisplay, key } = row;
     const val = entry.value;
     let valueCell;
@@ -2419,10 +2415,8 @@ function renderVarsTable(callStack) {
       valueCell = `<td class="${cls}">${escHtml(dispVal)}</td>`;
     }
     const tr = document.createElement('tr');
-    if (sectionKey) tr.classList.add('vars-row-' + sectionKey);
     tr.innerHTML = `<td class="var-name">${escHtml(name)}</td><td class="var-type">${escHtml(typeDisplay)}</td>${valueCell}`;
 
-    // Flash if value changed
     const prevKey = prevVarSnapshot.get(name);
     if (prevKey !== undefined && prevKey !== key) {
       tr.classList.add('flashing');
@@ -2442,7 +2436,12 @@ function renderArraySubTable(arr, name) {
 }
 
 function clearVars() {
-  varsTbody.innerHTML = '<tr id="vars-empty-row"><td colspan="3" class="vars-empty">No variables yet</td></tr>';
+  varsSections.innerHTML =
+    '<table class="vars-section-table"><caption class="sr-only">Variables</caption>' +
+    '<thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Value</th></tr></thead>' +
+    '<tbody><tr><td colspan="3" class="vars-empty">No variables yet</td></tr></tbody></table>';
+  varsFnName.hidden = true;
+  varsFnName.textContent = '';
   prevVarSnapshot = new Map();
 }
 

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="coral.css?v=4">
+  <link rel="stylesheet" href="coral.css?v=9">
 </head>
 <body>
 
@@ -113,21 +113,22 @@
     <!-- Variables panel -->
     <aside id="vars-panel" aria-label="Variable values">
       <div id="vars-header">Variables</div>
-      <table id="vars-table">
-        <caption class="sr-only">Current variable values</caption>
-        <thead>
-          <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Type</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody id="vars-tbody">
-          <tr id="vars-empty-row">
-            <td colspan="3" class="vars-empty">No variables yet</td>
-          </tr>
-        </tbody>
-      </table>
+      <div id="vars-fn-name" hidden></div>
+      <div id="vars-sections">
+        <table class="vars-section-table">
+          <caption class="sr-only">Variables</caption>
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Type</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="3" class="vars-empty">No variables yet</td></tr>
+          </tbody>
+        </table>
+      </div>
     </aside>
 
   </main>
@@ -221,6 +222,6 @@
     </div>
   </dialog>
 
-  <script src="coral.js?v=4"></script>
+  <script src="coral.js?v=9"></script>
 </body>
 </html>
