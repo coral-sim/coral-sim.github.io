@@ -586,15 +586,43 @@ header h1 {
 .var-float { color: var(--warn); }
 .var-str   { color: var(--hl-string); }
 
-.vars-frame-label td {
-  padding: 4px 8px 2px;
-  font-size: 0.72rem;
+/* Function title row (function name when inside a called function) */
+.vars-fn-title td {
+  padding: 5px 8px 3px;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--accent2);
-  background: color-mix(in srgb, var(--accent2) 10%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--accent2) 30%, transparent);
+  background: color-mix(in srgb, var(--accent2) 12%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--accent2) 40%, transparent);
   font-family: var(--mono);
   letter-spacing: 0.02em;
+}
+
+/* Section header rows: Parameters / Local Variables / Return */
+.vars-section-hdr td {
+  padding: 3px 8px 2px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+}
+.vars-section-params td  { color: var(--accent);  background: color-mix(in srgb, var(--accent)  8%, transparent); border-left-color: var(--accent); }
+.vars-section-locals td  { color: var(--muted);   background: color-mix(in srgb, var(--muted)   6%, transparent); border-left-color: var(--border); }
+.vars-section-return td  { color: var(--warn);    background: color-mix(in srgb, var(--warn)    8%, transparent); border-left-color: var(--warn); }
+
+/* Data rows get a colored left accent matching their section */
+.vars-row-params td:first-child { border-left: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.vars-row-return td:first-child  { border-left: 3px solid color-mix(in srgb, var(--warn)   40%, transparent); }
+.vars-row-locals td:first-child  { border-left: 3px solid transparent; }
+
+/* Empty dash row inside a section */
+.vars-empty-dash {
+  color: var(--muted);
+  font-style: italic;
+  padding-left: 16px !important;
+  font-size: 0.8rem;
 }
 
 /* Array sub-table */
@@ -620,18 +648,6 @@ header h1 {
 #vars-table tr.flashing td,
 .array-subtable tr.flashing td {
   animation: var-flash 600ms ease-out forwards;
-}
-
-/* Frame separator in vars table */
-.vars-frame-label td {
-  background: var(--panel);
-  color: var(--muted);
-  font-family: var(--sans);
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 4px 8px !important;
 }
 
 /* ── Output area ── */

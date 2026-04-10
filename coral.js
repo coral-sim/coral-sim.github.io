@@ -2337,62 +2337,99 @@ editor.addEventListener('keydown', e => {
 function renderVarsTable(callStack) {
   if (!callStack || callStack.length === 0) return;
 
-  const rows = [];
-  // Only show current frame for simplicity (could show all frames)
   const frame = callStack[callStack.length - 1];
   const vars = frame.scope.allVars();
+  const isFunction = callStack.length > 1;
 
+  // Build a flat list of row data for flash detection (keyed by name)
+  const allRowData = [];
   vars.forEach((entry, name) => {
-    const initialized = entry.initialized;
     const val = entry.value;
     const type = entry.declaredType;
+    const typeDisplay = type.replace('integer[]','int[]');
+    const key = name + ':' + (val instanceof CoralArray ? JSON.stringify(val.data) : val);
+    allRowData.push({ name, entry, type, typeDisplay, key });
+  });
 
+  varsTbody.innerHTML = '';
+
+  if (isFunction) {
+    // Split into three sections: Parameters, Local Variables, Return
+    const paramRows = [], localRows = [], returnRows = [];
+    for (const row of allRowData) {
+      if (frame.paramNames.has(row.name))       paramRows.push(row);
+      else if (frame.returnVar === row.name)     returnRows.push(row);
+      else                                       localRows.push(row);
+    }
+
+    // Function name title
+    const titleTr = document.createElement('tr');
+    titleTr.className = 'vars-fn-title';
+    titleTr.innerHTML = `<td colspan="3">${escHtml(frame.label)}</td>`;
+    varsTbody.appendChild(titleTr);
+
+    appendVarsSection('Parameters',     paramRows,  'params');
+    appendVarsSection('Local Variables', localRows, 'locals');
+    appendVarsSection('Return',          returnRows, 'return');
+  } else {
+    // Main: flat list, no section headers
+    if (allRowData.length === 0) {
+      varsTbody.innerHTML = '<tr><td colspan="3" class="vars-empty">No variables yet</td></tr>';
+    } else {
+      for (const row of allRowData) {
+        varsTbody.appendChild(buildVarRow(row, null));
+      }
+    }
+  }
+
+  // Update snapshot (across all vars regardless of section)
+  prevVarSnapshot = new Map(allRowData.map(r => [r.name, r.key]));
+
+  function appendVarsSection(label, rows, sectionKey) {
+    const hdr = document.createElement('tr');
+    hdr.className = 'vars-section-hdr vars-section-' + sectionKey;
+    hdr.innerHTML = `<td colspan="3">${escHtml(label)}</td>`;
+    varsTbody.appendChild(hdr);
+
+    if (rows.length === 0) {
+      const emptyTr = document.createElement('tr');
+      emptyTr.className = 'vars-section-empty vars-section-' + sectionKey + '-empty';
+      emptyTr.innerHTML = '<td colspan="3" class="vars-empty vars-empty-dash">&mdash;</td>';
+      varsTbody.appendChild(emptyTr);
+      return;
+    }
+
+    for (const row of rows) {
+      const tr = buildVarRow(row, sectionKey);
+      varsTbody.appendChild(tr);
+    }
+  }
+
+  function buildVarRow(row, sectionKey) {
+    const { name, entry, type, typeDisplay, key } = row;
+    const val = entry.value;
     let valueCell;
     if (val instanceof CoralArray) {
       valueCell = `<td>${renderArraySubTable(val, name)}</td>`;
     } else {
       const cls = type === 'float' ? 'var-float' : 'var-int';
-      const dispVal = type === 'float' ? formatValue(val, 'float', null) : String(Math.trunc(Number(val)));
+      const dispVal = type === 'float'
+        ? formatValue(val, 'float', null)
+        : String(Math.trunc(Number(val)));
       valueCell = `<td class="${cls}">${escHtml(dispVal)}</td>`;
     }
-
-    const typeDisplay = type.replace('integer[]','int[]').replace('float[]','float[]');
-    rows.push({ name, type: typeDisplay, valueCell, key: name + ':' + (val instanceof CoralArray ? JSON.stringify(val.data) : val) });
-  });
-
-  // Build DOM
-  varsTbody.innerHTML = '';
-
-  // Show frame label header when inside a called function
-  if (callStack.length > 1) {
-    const labelTr = document.createElement('tr');
-    labelTr.className = 'vars-frame-label';
-    labelTr.innerHTML = `<td colspan="3">${escHtml(frame.label)}</td>`;
-    varsTbody.appendChild(labelTr);
-  }
-
-  if (rows.length === 0) {
-    const emptyTr = document.createElement('tr');
-    emptyTr.innerHTML = '<td colspan="3" class="vars-empty">No variables yet</td>';
-    varsTbody.appendChild(emptyTr);
-    return;
-  }
-
-  for (const row of rows) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="var-name">${escHtml(row.name)}</td><td class="var-type">${escHtml(row.type)}</td>${row.valueCell}`;
-    varsTbody.appendChild(tr);
+    if (sectionKey) tr.classList.add('vars-row-' + sectionKey);
+    tr.innerHTML = `<td class="var-name">${escHtml(name)}</td><td class="var-type">${escHtml(typeDisplay)}</td>${valueCell}`;
 
     // Flash if value changed
-    const prevKey = prevVarSnapshot.get(row.name);
-    if (prevKey !== undefined && prevKey !== row.key) {
+    const prevKey = prevVarSnapshot.get(name);
+    if (prevKey !== undefined && prevKey !== key) {
       tr.classList.add('flashing');
       setTimeout(() => tr.classList.remove('flashing'), 650);
     }
+    return tr;
   }
-
-  // Update snapshot
-  prevVarSnapshot = new Map(rows.map(r => [r.name, r.key]));
 }
 
 function renderArraySubTable(arr, name) {
