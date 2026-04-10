@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="coral.css?v=9">
+  <link rel="stylesheet" href="coral.css?v=10">
 </head>
 <body>
 
@@ -22,6 +22,12 @@
   <!-- Title bar -->
   <header>
     <h1>Coral Sim</h1>
+    <div id="status-bar" role="status" aria-live="polite" aria-atomic="false" class="state-edit">
+      <span id="status-indicator" aria-hidden="true">&#x25CF;</span>
+      <span id="status-state">Edit Mode</span>
+      <span id="status-detail" aria-live="polite"></span>
+      <span id="status-step" aria-live="polite"></span>
+    </div>
     <div class="header-controls">
       <select id="sample-select" aria-label="Load sample program">
         <option value="">Load sample&hellip;</option>
@@ -52,14 +58,6 @@
            aria-valuetext="Medium (step every 1.2 seconds)">
     <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
     <button id="btn-instant" disabled aria-label="Run to completion instantly">Instant &#9193;</button>
-  </div>
-
-  <!-- Status bar -->
-  <div id="status-bar" role="status" aria-live="polite" aria-atomic="false" class="state-edit">
-    <span id="status-indicator" aria-hidden="true">&#x25CF;</span>
-    <span id="status-state">Edit Mode</span>
-    <span id="status-detail" aria-live="polite"></span>
-    <span id="status-step" aria-live="polite"></span>
   </div>
 
   <!-- Input area -->
@@ -222,6 +220,6 @@
     </div>
   </dialog>
 
-  <script src="coral.js?v=9"></script>
+  <script src="coral.js?v=10"></script>
 </body>
 </html>
