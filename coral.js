@@ -2378,7 +2378,18 @@ function renderVarsTable(callStack) {
     varsSections.appendChild(buildSectionTable(null, null, allRowData));
   }
 
-  prevVarSnapshot = new Map(allRowData.map(r => [r.name, r.key]));
+  // Build snapshot: scalar vars keyed by name, array vars keyed per-element ("name[i]")
+  // so that only the changed index row flashes, not the entire variable row.
+  const newSnapshot = new Map();
+  for (const r of allRowData) {
+    const val = r.entry.value;
+    if (val instanceof CoralArray && val._sizeSet) {
+      val.data.forEach((v, i) => newSnapshot.set(r.name + '[' + i + ']', String(v)));
+    } else {
+      newSnapshot.set(r.name, r.key);
+    }
+  }
+  prevVarSnapshot = newSnapshot;
 
   function buildSectionTable(label, sectionKey, rows) {
     const table = document.createElement('table');
@@ -2412,35 +2423,76 @@ function renderVarsTable(callStack) {
   function buildVarRow(row) {
     const { name, entry, type, typeDisplay, key } = row;
     const val = entry.value;
-    let valueCell;
+
+    const tr = document.createElement('tr');
+
     if (val instanceof CoralArray) {
-      valueCell = `<td>${renderArraySubTable(val, name)}</td>`;
+      // Build name/type cells via innerHTML, then DOM-append the subtable into the value cell
+      // so buildArraySubTable can attach .flashing to individual index rows.
+      tr.innerHTML = `<td class="var-name">${escHtml(name)}</td><td class="var-type">${escHtml(typeDisplay)}</td><td></td>`;
+      tr.lastElementChild.appendChild(buildArraySubTable(val, name));
+      // No flash on the outer row — individual index rows flash instead.
     } else {
       const cls = type === 'float' ? 'var-float' : 'var-int';
       const dispVal = type === 'float'
         ? formatValue(val, 'float', null)
         : String(Math.trunc(Number(val)));
-      valueCell = `<td class="${cls}">${escHtml(dispVal)}</td>`;
-    }
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="var-name">${escHtml(name)}</td><td class="var-type">${escHtml(typeDisplay)}</td>${valueCell}`;
+      tr.innerHTML = `<td class="var-name">${escHtml(name)}</td><td class="var-type">${escHtml(typeDisplay)}</td><td class="${cls}">${escHtml(dispVal)}</td>`;
 
-    const prevKey = prevVarSnapshot.get(name);
-    if (prevKey !== undefined && prevKey !== key) {
-      tr.classList.add('flashing');
-      setTimeout(() => tr.classList.remove('flashing'), 650);
+      // Flash scalar row if value changed
+      const prevKey = prevVarSnapshot.get(name);
+      if (prevKey !== undefined && prevKey !== key) {
+        tr.classList.add('flashing');
+        setTimeout(() => tr.classList.remove('flashing'), 650);
+      }
     }
     return tr;
   }
 }
 
-function renderArraySubTable(arr, name) {
+function buildArraySubTable(arr, name) {
+  const table = document.createElement('table');
+  table.className = 'array-subtable';
+
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th scope="col">Index</th><th scope="col">Value</th></tr>';
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
   if (!arr._sizeSet) {
-    return `<table class="array-subtable"><thead><tr><th>Index</th><th>Value</th></tr></thead><tbody><tr><td colspan="2" style="color:var(--muted);font-style:italic">Size not yet set</td></tr></tbody></table>`;
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 2;
+    td.style.cssText = 'color:var(--muted);font-style:italic';
+    td.textContent = 'Size not yet set';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  } else {
+    arr.data.forEach((v, i) => {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = i;
+      const td = document.createElement('td');
+      td.textContent = String(v);
+      tr.appendChild(th);
+      tr.appendChild(td);
+
+      // Flash only this index row if its value changed since the last step
+      const snapKey = name + '[' + i + ']';
+      const prevVal = prevVarSnapshot.get(snapKey);
+      if (prevVal !== undefined && prevVal !== String(v)) {
+        tr.classList.add('flashing');
+        setTimeout(() => tr.classList.remove('flashing'), 650);
+      }
+
+      tbody.appendChild(tr);
+    });
   }
-  const rowsHtml = arr.data.map((v, i) =>
-    `<tr><th scope="row">${i}</th><td>${escHtml(String(v))}</td></tr>`).join('');
-  return `<table class="array-subtable"><thead><tr><th scope="col">Index</th><th scope="col">Value</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+
+  table.appendChild(tbody);
+  return table;
 }
 
 function clearVars() {
