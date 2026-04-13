@@ -2614,7 +2614,7 @@ function switchToTab(name) {
 }
 
 // ── Theme select ──
-const THEMES = ['dark', 'rhc', 'light', 'dyslexic', 'hc'];
+const THEMES = ['dark', 'rhc', 'rhc-dark', 'light', 'dyslexic-light', 'dyslexic-dark', 'hc', 'synthwave'];
 
 function applyTheme(name) {
   // Remove all theme classes, then add the one for non-default themes
@@ -2637,7 +2637,7 @@ themeSelect.addEventListener('change', () => {
 });
 
 // ── Help modal ──
-btnHelp.addEventListener('click',      () => helpModal.showModal());
+btnHelp.addEventListener('click', () => { helpModal.showModal(); btnHelpClose.focus(); });
 btnHelpClose.addEventListener('click', () => { helpModal.close(); btnHelp.focus(); });
 helpModal.addEventListener('close',    () => btnHelp.focus());
 

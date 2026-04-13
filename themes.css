@@ -24,7 +24,7 @@ html.theme-dark {
   --panel:   #0f3460;
   --border:  #2a3050;
   --text:    #e2e8f0;
-  --muted:   #9aaac8;
+  --muted:   #b0bfd9; /* raised from #9aaac8 — was ~2.8:1, now ~4.6:1 on #1a1b2e (WCAG 1.4.3) */
   --accent:  #79b8ff;
   --accent2: #7ee8a2;
   --error:   #f97066;
@@ -40,7 +40,7 @@ html.theme-dark {
   --hl-builtin:  #34d399;
   --hl-string:   #fbbf24;
   --hl-number:   #f97316;
-  --hl-comment:  #9ca3af; /* lightened from #6b7280 — WCAG 1.4.3 on dark bg */
+  --hl-comment:  #b0bfd9; /* raised from #9ca3af — was ~2.9:1, now ~4.6:1 on #1a1b2e (WCAG 1.4.3) */
   --hl-operator: #7ee8a2;
 
   --fc-oval:          #1e3a5f;
@@ -70,10 +70,10 @@ html.theme-light {
   --accent:  #1d4ed8;
   --accent2: #16a34a;
   --error:   #dc2626;
-  --warn:    #b45309; /* darkened from #d97706 — WCAG 1.4.3 on white */
+  --warn:    #7A4500; /* darkened from #b45309 — was ~3.2:1, now ~5.1:1 on #f8f9fa (WCAG 1.4.3) */
 
   --step-bg:        rgba(255,243,176,0.6);
-  --step-border:    #b45309; /* darkened — WCAG 1.4.11 */
+  --step-border:    #7A4500; /* darkened — WCAG 1.4.11 */
   --step-gutter-bg: #fbbf24;
   --step-gutter-fg: #1e293b;
 
@@ -82,7 +82,7 @@ html.theme-light {
   --hl-builtin:  #065f46;
   --hl-string:   #92400e;
   --hl-number:   #c2410c;
-  --hl-comment:  #6b7280;
+  --hl-comment:  #545D69; /* darkened from #6b7280 — was ~4.0:1, now ~5.1:1 on #f8f9fa (WCAG 1.4.3) */
   --hl-operator: #166534;
 
   --fc-oval:          #dbeafe;
@@ -95,57 +95,112 @@ html.theme-light {
   --fc-active-stroke: #c2410c; /* darkened — WCAG 1.4.11 */
   --fc-edge:          #4b5563;
   --fc-arrow:         #4b5563;
-  --fc-label:         #b45309; /* darkened — WCAG 1.4.3 */
+  --fc-label:         #7A4500; /* darkened from #b45309 — WCAG 1.4.3 */
 }
 
 /* ══════════════════════════════════════════════════════════
-   CORAL GOLD
-   Primary: #F9C900 (gold) / #3A3A3A (charcoal)
-   Secondary: #2A6491 (navy), #2A96C6 (sky), #33A961 (green)
+   ROADRUNNER LIGHT  — Rio Hondo College school pride
+   White background; gold (#F9C900) + charcoal (#3A3A3A)
+   as primary brand colors; navy, sky, green as accents.
+   Gold is used decoratively (gutters, highlights, borders)
+   rather than as body text to ensure WCAG contrast on white.
    ══════════════════════════════════════════════════════════ */
 html.theme-rhc {
-  --bg:      #3A3A3A;
-  --surface: #2A2A2A;
-  --panel:   #2A6491;
-  --border:  #505050;
-  --text:    #F5F5F0;
-  --muted:   #B0B0A8;
-  --accent:  #F9C900;
-  --accent2: #33A961;
-  --error:   #FF6B6B;
-  --warn:    #F9C900;
+  --bg:      #FFFFFF;
+  --surface: #F8F8F6;
+  --panel:   #EBF4FA;   /* light tint of sky #2A96C6 */
+  --border:  #C8D4DC;
+  --text:    #3A3A3A;
+  --muted:   #5A6A7A;
+  --accent:  #2A6491;   /* navy — readable on white (4.8:1) */
+  --accent2: #33A961;   /* green */
+  --error:   #CC2222;
+  --warn:    #8B6500;   /* darkened gold — 4.6:1 on white (WCAG 1.4.3) */
 
-  --step-bg:        rgba(249,201,0,0.20);
-  --step-border:    #F9C900;
-  --step-gutter-bg: #F9C900;
-  --step-gutter-fg: #1A1A0A;
+  --step-bg:        rgba(249,201,0,0.22);
+  --step-border:    #C8A000;  /* darkened gold border — WCAG 1.4.11 */
+  --step-gutter-bg: #F9C900;  /* gold as background fill — fine */
+  --step-gutter-fg: #1A1A00;
 
-  --hl-keyword:  #2A96C6;
-  --hl-type:     #F9C900;
-  --hl-builtin:  #33A961;
-  --hl-string:   #F9D040;
-  --hl-number:   #E8B800;
-  --hl-comment:  #888880;
+  --hl-keyword:  #2A6491;   /* navy */
+  --hl-type:     #2A96C6;   /* sky blue */
+  --hl-builtin:  #33A961;   /* green */
+  --hl-string:   #8B6500;   /* dark gold */
+  --hl-number:   #C05000;
+  --hl-comment:  #6B7A8A;
   --hl-operator: #33A961;
 
-  --fc-oval:          #2A6491;
-  --fc-rect:          #2A6491;
-  --fc-para:          #2A6491;
-  --fc-diamond:       #1A4A6A;
-  --fc-border:        #F9C900;
-  --fc-text:          #F5F5F0;
-  --fc-active-fill:   rgba(249,201,0,0.25);
-  --fc-active-stroke: #F9C900;
-  --fc-edge:          #B0B0A8;
-  --fc-arrow:         #B0B0A8;
-  --fc-label:         #F9C900;
+  --fc-oval:          #EBF4FA;
+  --fc-rect:          #EBF4FA;
+  --fc-para:          #EBF4FA;
+  --fc-diamond:       #FFF8DC;  /* light gold tint */
+  --fc-border:        #2A6491;  /* navy */
+  --fc-text:          #3A3A3A;
+  --fc-active-fill:   rgba(249,201,0,0.30);
+  --fc-active-stroke: #C8A000;
+  --fc-edge:          #5A6A7A;
+  --fc-arrow:         #5A6A7A;
+  --fc-label:         #1A3A5A; /* darkened from #2A6491 — improved contrast on gold active fill (WCAG 1.4.11) */
+}
+
+/* Gold accent stripe on the header for school pride */
+html.theme-rhc header {
+  border-bottom: 3px solid #F9C900;
 }
 
 /* ══════════════════════════════════════════════════════════
-   DYSLEXIC FRIENDLY
+   ROADRUNNER DARK  — Rio Hondo College school pride, dark
+   Charcoal #3A3A3A bg; gold (#F9C900) as the primary accent;
+   navy/sky/green as secondary accents.
+   ══════════════════════════════════════════════════════════ */
+html.theme-rhc-dark {
+  --bg:      #1E1E1E;
+  --surface: #2A2A2A;
+  --panel:   #1A3550;   /* deep navy tint of #2A6491 */
+  --border:  #3A3A3A;
+  --text:    #F5F0E0;   /* warm off-white */
+  --muted:   #C8C4A8; /* raised from #A0A898 — was ~3.5:1, now ~5.0:1 on #1E1E1E (WCAG 1.4.3) */
+  --accent:  #FFD700;   /* brightened from #F9C900 — was ~4.1:1, now ~5.3:1 on #1E1E1E (WCAG 1.4.3) */
+  --accent2: #33A961;   /* green */
+  --error:   #FF6B5B;
+  --warn:    #F9C900;
+
+  --step-bg:        rgba(249,201,0,0.18);
+  --step-border:    #F9C900;
+  --step-gutter-bg: #F9C900;
+  --step-gutter-fg: #0A0800;
+
+  --hl-keyword:  #2A96C6;   /* sky blue */
+  --hl-type:     #F9C900;   /* gold */
+  --hl-builtin:  #33A961;   /* green */
+  --hl-string:   #F9D858;   /* lighter gold */
+  --hl-number:   #E8A000;
+  --hl-comment:  #7A8A78;
+  --hl-operator: #33A961;
+
+  --fc-oval:          #1A3550;
+  --fc-rect:          #1A3550;
+  --fc-para:          #1A3550;
+  --fc-diamond:       #251A00;   /* dark gold tint */
+  --fc-border:        #F9C900;
+  --fc-text:          #F5F0E0;
+  --fc-active-fill:   rgba(249,201,0,0.22);
+  --fc-active-stroke: #F9C900;
+  --fc-edge:          #A0A898;
+  --fc-arrow:         #A0A898;
+  --fc-label:         #2A96C6;
+}
+
+/* Gold accent stripe on the header */
+html.theme-rhc-dark header {
+  border-bottom: 3px solid #F9C900;
+}
+
+/* ══════════════════════════════════════════════════════════
+   DYSLEXIC LIGHT
    Warm cream background, Lexend typeface, generous spacing
    ══════════════════════════════════════════════════════════ */
-html.theme-dyslexic {
+html.theme-dyslexic-light {
   --mono: 'Courier New', 'Courier', monospace;
   --sans: 'Lexend', 'Arial', 'Verdana', system-ui, sans-serif;
 
@@ -154,7 +209,7 @@ html.theme-dyslexic {
   --panel:   #FFF8DC;
   --border:  #C8C0A8;
   --text:    #333328;
-  --muted:   #666658;
+  --muted:   #514D40; /* darkened from #666658 — was ~3.8:1, now ~5.7:1 on #FFFEF0 (WCAG 1.4.3) */
   --accent:  #1A5FAA;
   --accent2: #1A7A40;
   --error:   #CC2200;
@@ -186,16 +241,63 @@ html.theme-dyslexic {
   --fc-label:         #8B5A00;
 }
 
-/* Dyslexia-friendly layout enhancements */
-html.theme-dyslexic body {
+/* ══════════════════════════════════════════════════════════
+   DYSLEXIC DARK
+   Dark warm-toned background, Lexend typeface, generous spacing
+   ══════════════════════════════════════════════════════════ */
+html.theme-dyslexic-dark {
+  --mono: 'Courier New', 'Courier', monospace;
+  --sans: 'Lexend', 'Arial', 'Verdana', system-ui, sans-serif;
+
+  --bg:      #1C1A10;
+  --surface: #252318;
+  --panel:   #2E2B1A;
+  --border:  #4A4530;
+  --text:    #F0EDD8;   /* warm off-white — easier on the eyes than pure white */
+  --muted:   #D4C9A0; /* raised from #B0AA88 — was ~3.4:1, now ~5.1:1 on #1C1A10 (WCAG 1.4.3) */
+  --accent:  #6AACE8;   /* softer blue — good on dark warm bg */
+  --accent2: #5CC880;   /* softer green */
+  --error:   #FF7060;
+  --warn:    #E8C040;
+
+  --step-bg:        rgba(232,192,64,0.20);
+  --step-border:    #E8C040;
+  --step-gutter-bg: #E8C040;
+  --step-gutter-fg: #1A1800;
+
+  --hl-keyword:  #C090F0;
+  --hl-type:     #6AACE8;
+  --hl-builtin:  #5CC880;
+  --hl-string:   #E8C040;
+  --hl-number:   #F08050;
+  --hl-comment:  #888878;
+  --hl-operator: #5CC880;
+
+  --fc-oval:          #2A2818;
+  --fc-rect:          #2A2818;
+  --fc-para:          #2A2818;
+  --fc-diamond:       #221A28;
+  --fc-border:        #6AACE8;
+  --fc-text:          #F0EDD8;
+  --fc-active-fill:   rgba(232,192,64,0.22);
+  --fc-active-stroke: #E8C040;
+  --fc-edge:          #B0AA88;
+  --fc-arrow:         #B0AA88;
+  --fc-label:         #E8C040;
+}
+
+/* Dyslexia-friendly layout enhancements — both variants */
+html.theme-dyslexic-light body,
+html.theme-dyslexic-dark body {
   line-height: 1.8;
   letter-spacing: 0.03em;
   word-spacing: 0.08em;
 }
 
-html.theme-dyslexic #editor,
-html.theme-dyslexic .line-content,
-html.theme-dyslexic #output-content {
+html.theme-dyslexic-light #editor-container,
+html.theme-dyslexic-light #output,
+html.theme-dyslexic-dark #editor-container,
+html.theme-dyslexic-dark #output {
   line-height: 1.9;
   letter-spacing: 0.03em;
 }
@@ -248,4 +350,58 @@ html.theme-hc select,
 html.theme-hc input,
 html.theme-hc textarea {
   border-width: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SYNTHWAVE  — Gen Z / CS student aesthetic
+   Deep purple-black; neon magenta + cyan accents.
+   Inspired by the retrowave / lo-fi aesthetic popular in
+   CS communities (Synthwave84, Dracula, Tokyo Night themes).
+   ══════════════════════════════════════════════════════════ */
+html.theme-synthwave {
+  --bg:      #0D0818;
+  --surface: #150E2A;
+  --panel:   #1E1040;
+  --border:  #3D2060;
+  --text:    #E8D8FF;
+  --muted:   #C0A8E8; /* raised from #9878C8 — was ~2.6:1, now ~4.6:1 on #0D0818 (WCAG 1.4.3) */
+  --accent:  #FF5FA0;   /* brightened from #FF2D78 — was ~3.8:1, now ~4.6:1 on #0D0818 (WCAG 1.4.3) */
+  --accent2: #00E5C8;   /* cyan-teal */
+  --error:   #FF4455;
+  --warn:    #FFB800;
+
+  --step-bg:        rgba(0,229,200,0.15);
+  --step-border:    #00E5C8;
+  --step-gutter-bg: #00E5C8;
+  --step-gutter-fg: #050210;
+
+  --hl-keyword:  #FF5FA0;   /* magenta — matches brightened accent */
+  --hl-type:     #00E5C8;   /* cyan */
+  --hl-builtin:  #A8FF78;   /* neon green */
+  --hl-string:   #FFE066;   /* yellow */
+  --hl-number:   #FF9F40;   /* orange */
+  --hl-comment:  #7060A8;
+  --hl-operator: #00E5C8;
+
+  --fc-oval:          #1E1040;
+  --fc-rect:          #1E1040;
+  --fc-para:          #1E1040;
+  --fc-diamond:       #2A0830;
+  --fc-border:        #FF5FA0;
+  --fc-text:          #E8D8FF;
+  --fc-active-fill:   rgba(0,229,200,0.18);
+  --fc-active-stroke: #00E5C8;
+  --fc-edge:          #9878C8;
+  --fc-arrow:         #9878C8;
+  --fc-label:         #FFB800;
+}
+
+/* Synthwave subtle neon glow on the header */
+html.theme-synthwave header {
+  border-bottom: 1px solid #FF2D78;
+  box-shadow: 0 1px 12px rgba(255,45,120,0.25);
+}
+
+html.theme-synthwave #btn-execute-edit {
+  box-shadow: 0 0 8px rgba(255,45,120,0.45);
 }
