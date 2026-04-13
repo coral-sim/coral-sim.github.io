@@ -294,12 +294,20 @@ html.theme-dyslexic-dark body {
   word-spacing: 0.08em;
 }
 
-html.theme-dyslexic-light #editor-container,
 html.theme-dyslexic-light #output,
-html.theme-dyslexic-dark #editor-container,
 html.theme-dyslexic-dark #output {
   line-height: 1.9;
   letter-spacing: 0.03em;
+}
+
+/* The editor uses a textarea + overlay div that must stay pixel-perfect.
+   Reset letter/word-spacing so they don't drift apart. */
+html.theme-dyslexic-light #code-editor,
+html.theme-dyslexic-light #highlight-overlay,
+html.theme-dyslexic-dark #code-editor,
+html.theme-dyslexic-dark #highlight-overlay {
+  letter-spacing: normal;
+  word-spacing: normal;
 }
 
 /* ══════════════════════════════════════════════════════════
