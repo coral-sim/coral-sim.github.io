@@ -1,96 +1,11 @@
 /* ============================================================
    Coral Sim — Stylesheet
-   Dark theme by default; html.light switches to light theme.
+   Theme color tokens live in themes.css; this file contains
+   only structural / layout CSS.
    ============================================================ */
 
 /* ── Reset & base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-/* ── Theme custom properties ── */
-:root {
-  /* Dark theme */
-  --bg:           #1a1b2e;
-  --surface:      #16213e;
-  --panel:        #0f3460;
-  --border:       #2a3050;
-  --text:         #e2e8f0;
-  --muted:        #9aaac8;
-  --accent:       #79b8ff;
-  --accent2:      #7ee8a2;
-  --error:        #f97066;
-  --warn:         #f9a84f;
-
-  /* Step highlight */
-  --step-bg:          rgba(250,255,110,0.18);
-  --step-border:      #e6e800;
-  --step-gutter-bg:   #faff6e;
-  --step-gutter-fg:   #0f1117;
-
-  /* Syntax colors */
-  --hl-keyword:  #c084fc;
-  --hl-type:     #60a5fa;
-  --hl-builtin:  #34d399;
-  --hl-string:   #fbbf24;
-  --hl-number:   #f97316;
-  --hl-comment:  #9ca3af; /* lightened from #6b7280 — was 3.50:1, now ~8.6:1 on dark bg (WCAG 1.4.3) */
-  --hl-operator: #7ee8a2;
-
-  /* Flowchart colors */
-  --fc-oval:     #1e3a5f;
-  --fc-rect:     #1e3a5f;
-  --fc-para:     #1e3a5f;
-  --fc-diamond:  #2a1f4a;
-  --fc-border:   #79b8ff;
-  --fc-text:     #e2e8f0;
-  --fc-active-fill:   rgba(250,255,110,0.22);
-  --fc-active-stroke: #e6e800;
-  --fc-edge:     #9aaac8;
-  --fc-arrow:    #9aaac8;
-  --fc-label:    #f9a84f;
-
-  /* Misc */
-  --radius:  6px;
-  --mono:    'JetBrains Mono', monospace;
-  --sans:    'Inter', system-ui, sans-serif;
-}
-
-html.light {
-  --bg:           #f8f9fa;
-  --surface:      #ffffff;
-  --panel:        #f0f4ff;
-  --border:       #d0d5e8;
-  --text:         #1e293b;
-  --muted:        #4b5563;
-  --accent:       #1d4ed8;
-  --accent2:      #16a34a;
-  --error:        #dc2626;
-  --warn:         #b45309; /* darkened from #d97706 — was 3.02:1 on white, now 5.02:1 (WCAG 1.4.3) */
-
-  --step-bg:          rgba(255,243,176,0.6);
-  --step-border:      #b45309; /* darkened from #d4a017 — was 2.25:1 on bg, now 4.76:1 (WCAG 1.4.11) */
-  --step-gutter-bg:   #fbbf24;
-  --step-gutter-fg:   #1e293b;
-
-  --hl-keyword:  #7c3aed;
-  --hl-type:     #1d4ed8;
-  --hl-builtin:  #065f46;
-  --hl-string:   #92400e;
-  --hl-number:   #c2410c;
-  --hl-comment:  #6b7280;
-  --hl-operator: #166534;
-
-  --fc-oval:     #dbeafe;
-  --fc-rect:     #dbeafe;
-  --fc-para:     #dbeafe;
-  --fc-diamond:  #ede9fe;
-  --fc-border:   #1d4ed8;
-  --fc-text:     #1e293b;
-  --fc-active-fill:   rgba(255,243,176,0.8);
-  --fc-active-stroke: #c2410c; /* darkened from #d4a017 — was 2.25:1 on bg/2.25 on fills, now 3.07:1 (WCAG 1.4.11) */
-  --fc-edge:     #4b5563;
-  --fc-arrow:    #4b5563;
-  --fc-label:    #b45309; /* darkened from #d97706 — was 3.02:1 on bg, now 4.76:1 (WCAG 1.4.3) */
-}
 
 /* ── Accessibility utilities ── */
 .sr-only {

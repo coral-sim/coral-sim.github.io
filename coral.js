@@ -1929,7 +1929,7 @@ const speedSlider    = document.getElementById('speed-slider');
 const btnInstant     = document.getElementById('btn-instant');
 const sampleSelect   = document.getElementById('sample-select');
 const btnHelp        = document.getElementById('btn-help');
-const btnTheme       = document.getElementById('btn-theme');
+const themeSelect    = document.getElementById('theme-select');
 const helpModal      = document.getElementById('help-modal');
 const btnHelpClose   = document.getElementById('btn-help-close');
 const btnClearOutput = document.getElementById('btn-clear-output');
@@ -2613,21 +2613,27 @@ function switchToTab(name) {
   }
 }
 
-// ── Theme toggle ──
+// ── Theme select ──
+const THEMES = ['dark', 'rhc', 'light', 'dyslexic', 'hc'];
+
+function applyTheme(name) {
+  // Remove all theme classes, then add the one for non-default themes
+  THEMES.forEach(t => document.documentElement.classList.remove('theme-' + t));
+  if (name !== 'dark') {
+    document.documentElement.classList.add('theme-' + name);
+  }
+  try { localStorage.setItem('coral-theme', name); } catch(e) {}
+}
+
 (function initTheme() {
   const saved = localStorage.getItem('coral-theme');
-  if (saved === 'light') {
-    document.documentElement.classList.add('light');
-    btnTheme.textContent = '\u263E\uFE0E';
-    btnTheme.setAttribute('aria-label', 'Switch to dark mode');
-  }
+  const theme = THEMES.includes(saved) ? saved : 'rhc';
+  applyTheme(theme);
+  themeSelect.value = theme;
 })();
 
-btnTheme.addEventListener('click', () => {
-  const isLight = document.documentElement.classList.toggle('light');
-  btnTheme.textContent = isLight ? '\u263E\uFE0E' : '\u2600\uFE0E';
-  btnTheme.setAttribute('aria-label', isLight ? 'Switch to dark mode' : 'Switch to light mode');
-  try { localStorage.setItem('coral-theme', isLight ? 'light' : 'dark'); } catch(e) {}
+themeSelect.addEventListener('change', () => {
+  applyTheme(themeSelect.value);
 });
 
 // ── Help modal ──

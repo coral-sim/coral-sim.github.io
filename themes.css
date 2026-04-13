@@ -1,0 +1,251 @@
+/* ============================================================
+   Coral Sim — Theme Definitions
+   All color / font tokens for each named theme.
+   Structural CSS lives in coral.css; only custom-property
+   values and theme-specific layout tweaks belong here.
+   ============================================================ */
+
+/* ── Shared structural tokens (never theme-specific) ── */
+:root {
+  --radius: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   DARK  (default — no class needed; also html.theme-dark)
+   Deep navy / midnight blue
+   ══════════════════════════════════════════════════════════ */
+html,
+html.theme-dark {
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+
+  --bg:      #1a1b2e;
+  --surface: #16213e;
+  --panel:   #0f3460;
+  --border:  #2a3050;
+  --text:    #e2e8f0;
+  --muted:   #9aaac8;
+  --accent:  #79b8ff;
+  --accent2: #7ee8a2;
+  --error:   #f97066;
+  --warn:    #f9a84f;
+
+  --step-bg:        rgba(250,255,110,0.18);
+  --step-border:    #e6e800;
+  --step-gutter-bg: #faff6e;
+  --step-gutter-fg: #0f1117;
+
+  --hl-keyword:  #c084fc;
+  --hl-type:     #60a5fa;
+  --hl-builtin:  #34d399;
+  --hl-string:   #fbbf24;
+  --hl-number:   #f97316;
+  --hl-comment:  #9ca3af; /* lightened from #6b7280 — WCAG 1.4.3 on dark bg */
+  --hl-operator: #7ee8a2;
+
+  --fc-oval:          #1e3a5f;
+  --fc-rect:          #1e3a5f;
+  --fc-para:          #1e3a5f;
+  --fc-diamond:       #2a1f4a;
+  --fc-border:        #79b8ff;
+  --fc-text:          #e2e8f0;
+  --fc-active-fill:   rgba(250,255,110,0.22);
+  --fc-active-stroke: #e6e800;
+  --fc-edge:          #9aaac8;
+  --fc-arrow:         #9aaac8;
+  --fc-label:         #f9a84f;
+}
+
+/* ══════════════════════════════════════════════════════════
+   LIGHT
+   Clean white / pale blue
+   ══════════════════════════════════════════════════════════ */
+html.theme-light {
+  --bg:      #f8f9fa;
+  --surface: #ffffff;
+  --panel:   #f0f4ff;
+  --border:  #d0d5e8;
+  --text:    #1e293b;
+  --muted:   #4b5563;
+  --accent:  #1d4ed8;
+  --accent2: #16a34a;
+  --error:   #dc2626;
+  --warn:    #b45309; /* darkened from #d97706 — WCAG 1.4.3 on white */
+
+  --step-bg:        rgba(255,243,176,0.6);
+  --step-border:    #b45309; /* darkened — WCAG 1.4.11 */
+  --step-gutter-bg: #fbbf24;
+  --step-gutter-fg: #1e293b;
+
+  --hl-keyword:  #7c3aed;
+  --hl-type:     #1d4ed8;
+  --hl-builtin:  #065f46;
+  --hl-string:   #92400e;
+  --hl-number:   #c2410c;
+  --hl-comment:  #6b7280;
+  --hl-operator: #166534;
+
+  --fc-oval:          #dbeafe;
+  --fc-rect:          #dbeafe;
+  --fc-para:          #dbeafe;
+  --fc-diamond:       #ede9fe;
+  --fc-border:        #1d4ed8;
+  --fc-text:          #1e293b;
+  --fc-active-fill:   rgba(255,243,176,0.8);
+  --fc-active-stroke: #c2410c; /* darkened — WCAG 1.4.11 */
+  --fc-edge:          #4b5563;
+  --fc-arrow:         #4b5563;
+  --fc-label:         #b45309; /* darkened — WCAG 1.4.3 */
+}
+
+/* ══════════════════════════════════════════════════════════
+   CORAL GOLD
+   Primary: #F9C900 (gold) / #3A3A3A (charcoal)
+   Secondary: #2A6491 (navy), #2A96C6 (sky), #33A961 (green)
+   ══════════════════════════════════════════════════════════ */
+html.theme-rhc {
+  --bg:      #3A3A3A;
+  --surface: #2A2A2A;
+  --panel:   #2A6491;
+  --border:  #505050;
+  --text:    #F5F5F0;
+  --muted:   #B0B0A8;
+  --accent:  #F9C900;
+  --accent2: #33A961;
+  --error:   #FF6B6B;
+  --warn:    #F9C900;
+
+  --step-bg:        rgba(249,201,0,0.20);
+  --step-border:    #F9C900;
+  --step-gutter-bg: #F9C900;
+  --step-gutter-fg: #1A1A0A;
+
+  --hl-keyword:  #2A96C6;
+  --hl-type:     #F9C900;
+  --hl-builtin:  #33A961;
+  --hl-string:   #F9D040;
+  --hl-number:   #E8B800;
+  --hl-comment:  #888880;
+  --hl-operator: #33A961;
+
+  --fc-oval:          #2A6491;
+  --fc-rect:          #2A6491;
+  --fc-para:          #2A6491;
+  --fc-diamond:       #1A4A6A;
+  --fc-border:        #F9C900;
+  --fc-text:          #F5F5F0;
+  --fc-active-fill:   rgba(249,201,0,0.25);
+  --fc-active-stroke: #F9C900;
+  --fc-edge:          #B0B0A8;
+  --fc-arrow:         #B0B0A8;
+  --fc-label:         #F9C900;
+}
+
+/* ══════════════════════════════════════════════════════════
+   DYSLEXIC FRIENDLY
+   Warm cream background, Lexend typeface, generous spacing
+   ══════════════════════════════════════════════════════════ */
+html.theme-dyslexic {
+  --mono: 'Courier New', 'Courier', monospace;
+  --sans: 'Lexend', 'Arial', 'Verdana', system-ui, sans-serif;
+
+  --bg:      #FFFEF0;
+  --surface: #FFFFF8;
+  --panel:   #FFF8DC;
+  --border:  #C8C0A8;
+  --text:    #333328;
+  --muted:   #666658;
+  --accent:  #1A5FAA;
+  --accent2: #1A7A40;
+  --error:   #CC2200;
+  --warn:    #8B5A00;
+
+  --step-bg:        rgba(255,220,0,0.30);
+  --step-border:    #8B5A00;
+  --step-gutter-bg: #FFD700;
+  --step-gutter-fg: #1A1A10;
+
+  --hl-keyword:  #6A2AAA;
+  --hl-type:     #1A5FAA;
+  --hl-builtin:  #1A7A40;
+  --hl-string:   #7A3500;
+  --hl-number:   #A03000;
+  --hl-comment:  #777768;
+  --hl-operator: #1A7A40;
+
+  --fc-oval:          #E8F0FF;
+  --fc-rect:          #E8F0FF;
+  --fc-para:          #E8F0FF;
+  --fc-diamond:       #EDE8FF;
+  --fc-border:        #1A5FAA;
+  --fc-text:          #333328;
+  --fc-active-fill:   rgba(255,220,0,0.55);
+  --fc-active-stroke: #A03000;
+  --fc-edge:          #666658;
+  --fc-arrow:         #666658;
+  --fc-label:         #8B5A00;
+}
+
+/* Dyslexia-friendly layout enhancements */
+html.theme-dyslexic body {
+  line-height: 1.8;
+  letter-spacing: 0.03em;
+  word-spacing: 0.08em;
+}
+
+html.theme-dyslexic #editor,
+html.theme-dyslexic .line-content,
+html.theme-dyslexic #output-content {
+  line-height: 1.9;
+  letter-spacing: 0.03em;
+}
+
+/* ══════════════════════════════════════════════════════════
+   HIGH CONTRAST
+   Pure black / white, WCAG AAA compliance
+   ══════════════════════════════════════════════════════════ */
+html.theme-hc {
+  --bg:      #000000;
+  --surface: #0A0A0A;
+  --panel:   #111111;
+  --border:  #FFFFFF;
+  --text:    #FFFFFF;
+  --muted:   #DDDDDD;
+  --accent:  #FFFF00;
+  --accent2: #00FF88;
+  --error:   #FF4444;
+  --warn:    #FFAA00;
+
+  --step-bg:        rgba(255,255,0,0.25);
+  --step-border:    #FFFF00;
+  --step-gutter-bg: #FFFF00;
+  --step-gutter-fg: #000000;
+
+  --hl-keyword:  #FF88FF;
+  --hl-type:     #88CCFF;
+  --hl-builtin:  #00FF88;
+  --hl-string:   #FFCC00;
+  --hl-number:   #FF8800;
+  --hl-comment:  #AAAAAA;
+  --hl-operator: #00FF88;
+
+  --fc-oval:          #111111;
+  --fc-rect:          #111111;
+  --fc-para:          #111111;
+  --fc-diamond:       #0A0A0A;
+  --fc-border:        #FFFFFF;
+  --fc-text:          #FFFFFF;
+  --fc-active-fill:   rgba(255,255,0,0.30);
+  --fc-active-stroke: #FFFF00;
+  --fc-edge:          #DDDDDD;
+  --fc-arrow:         #DDDDDD;
+  --fc-label:         #FFAA00;
+}
+
+/* High-contrast border reinforcement */
+html.theme-hc button,
+html.theme-hc select,
+html.theme-hc input,
+html.theme-hc textarea {
+  border-width: 2px;
+}
