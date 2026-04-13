@@ -282,11 +282,10 @@ class Parser {
     const params = this.parseParamList();
     this.eat(TK.RPAREN, `Expected ')' after parameter list`);
     this.eat(TK.RETURNS, `Expected 'returns' after ')'`);
-    // ReturnSpec: 'nothing' 'nothing' | Type Name
+    // ReturnSpec: 'nothing' | Type Name
     let returnType, returnVar;
     if (this.check(TK.NOTHING)) {
-      this.advance(); // 'nothing' (type)
-      this.eat(TK.NOTHING, `Expected second 'nothing' after 'returns nothing'`);
+      this.advance(); // consume 'nothing'
       returnType = 'nothing'; returnVar = null;
     } else if (this.check(TK.INTEGER) || this.check(TK.FLOAT)) {
       const rt = this.advance();
@@ -1269,7 +1268,7 @@ function* genProgram(ast, inputQueue, output) {
 
   const mainFn = functions.get('Main');
   if (!mainFn) throw RuntimeError(`No Main function`, 1,
-    `No 'Main' function found. When using Function definitions, you must include 'Function Main() returns nothing nothing'.`);
+    `No 'Main' function found. When using Function definitions, you must include 'Function Main() returns nothing'.`);
 
   const scope = new Scope();
   if (mainFn.returnVar) {
@@ -1899,7 +1898,7 @@ const SAMPLES = {
   },
   func: {
     label: 'Function Example (F→C)',
-    code: `Function FahrenheitToCelsius(float fahr) returns float celsius\n   celsius = (fahr - 32.0) * 5.0 / 9.0\n\nFunction Main() returns nothing nothing\n   float temp\n   float result\n   temp = Get next input\n   result = FahrenheitToCelsius(temp)\n   Put "Celsius: " to output\n   Put result with 1 decimal places to output`,
+    code: `Function FahrenheitToCelsius(float fahr) returns float celsius\n   celsius = (fahr - 32.0) * 5.0 / 9.0\n\nFunction Main() returns nothing\n   float temp\n   float result\n   temp = Get next input\n   result = FahrenheitToCelsius(temp)\n   Put "Celsius: " to output\n   Put result with 1 decimal places to output`,
     inputs: '98.6'
   }
 };

@@ -52,6 +52,10 @@ html.size-large { font-size: 17px; }
 html.size-xl    { font-size: 21px; }
 html.size-xl header { height: auto; min-height: 52px; }
 
+/* Widen vars panel at larger sizes so type labels and column headers don't wrap */
+html.size-large #workspace { grid-template-columns: 1fr 340px; }
+html.size-xl    #workspace { grid-template-columns: 1fr 420px; }
+
 body {
   display: flex;
   flex-direction: column;
@@ -529,6 +533,7 @@ header h1 {
 .vars-section-table th {
   background: var(--surface);
   padding: 4px 8px;
+  white-space: nowrap;
   text-align: left;
   font-weight: 600;
   color: var(--muted);
@@ -558,7 +563,7 @@ header h1 {
 }
 
 .var-name { color: var(--accent); }
-.var-type { color: var(--muted); font-size: 0.75rem; }
+.var-type { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
 .var-uninit { color: var(--muted); }
 .var-int   { color: var(--hl-number); }
 .var-float { color: var(--warn); }
@@ -576,7 +581,7 @@ header h1 {
   padding: 1px 4px;
   border: 1px solid var(--border);
 }
-.array-subtable th { color: var(--muted); font-weight: 600; background: var(--bg); }
+.array-subtable th { color: var(--muted); font-weight: 600; background: var(--bg); white-space: nowrap; }
 .array-subtable td { color: var(--text); }
 
 /* Flash animation for changed variables */
