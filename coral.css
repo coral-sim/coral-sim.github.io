@@ -47,6 +47,11 @@ html, body {
   overflow: hidden;
 }
 
+/* ── Text size tiers ── */
+html.size-large { font-size: 17px; }
+html.size-xl    { font-size: 21px; }
+html.size-xl header { height: auto; min-height: 52px; }
+
 body {
   display: flex;
   flex-direction: column;
@@ -138,7 +143,7 @@ header h1 {
 }
 
 #status-indicator {
-  font-size: 0.55rem;
+  font-size: 0.75rem;
   line-height: 1;
   transition: color 0.2s;
 }
@@ -166,7 +171,7 @@ header h1 {
 
 #status-step {
   font-family: var(--mono);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -364,10 +369,16 @@ header h1 {
   font-feature-settings: "liga" 0, "calt" 0;
 }
 
-/* Also disable ligatures on the highlight overlay */
-#highlight-overlay {
+/* Also disable ligatures on the highlight overlay.
+   Always reset letter/word-spacing so textarea and overlay stay pixel-perfect
+   regardless of theme or dyslexic body spacing overrides. */
+#highlight-overlay,
+#code-editor,
+#gutter {
   font-variant-ligatures: none;
   font-feature-settings: "liga" 0, "calt" 0;
+  letter-spacing: normal;
+  word-spacing: normal;
 }
 
 /* ── Flowchart panel ── */
@@ -444,9 +455,9 @@ header h1 {
   stroke: var(--fc-active-stroke) !important;
   stroke-width: 2.5px !important;
 }
-.fc-node-text { font-family: var(--mono); font-size: 11px; fill: var(--fc-text); font-variant-ligatures: none; }
+.fc-node-text { font-family: var(--mono); font-size: 12px; fill: var(--fc-text); font-variant-ligatures: none; }
 .fc-edge { stroke: var(--fc-edge); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
-.fc-edge-label { font-family: var(--sans); font-size: 10px; fill: var(--fc-label); font-weight: 600; }
+.fc-edge-label { font-family: var(--sans); font-size: 11px; fill: var(--fc-label); font-weight: 600; }
 
 /* ── Variables panel ── */
 #vars-panel {
@@ -505,7 +516,7 @@ header h1 {
 .vars-section-table caption {
   text-align: left;
   padding: 5px 8px 3px;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -523,7 +534,7 @@ header h1 {
   color: var(--muted);
   border-bottom: 1px solid var(--border);
   font-family: var(--sans);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -547,7 +558,7 @@ header h1 {
 }
 
 .var-name { color: var(--accent); }
-.var-type { color: var(--muted); font-size: 0.72rem; }
+.var-type { color: var(--muted); font-size: 0.75rem; }
 .var-uninit { color: var(--muted); }
 .var-int   { color: var(--hl-number); }
 .var-float { color: var(--warn); }
@@ -558,7 +569,7 @@ header h1 {
 .array-subtable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   margin-top: 2px;
 }
 .array-subtable th, .array-subtable td {
@@ -607,7 +618,7 @@ header h1 {
 }
 
 #btn-clear-output {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   padding: 2px 8px;
   min-height: 24px;
 }

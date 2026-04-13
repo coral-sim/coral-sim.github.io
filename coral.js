@@ -1930,6 +1930,7 @@ const btnInstant     = document.getElementById('btn-instant');
 const sampleSelect   = document.getElementById('sample-select');
 const btnHelp        = document.getElementById('btn-help');
 const themeSelect    = document.getElementById('theme-select');
+const textSizeSelect = document.getElementById('text-size-select');
 const helpModal      = document.getElementById('help-modal');
 const btnHelpClose   = document.getElementById('btn-help-close');
 const btnClearOutput = document.getElementById('btn-clear-output');
@@ -2635,6 +2636,36 @@ function applyTheme(name) {
 themeSelect.addEventListener('change', () => {
   applyTheme(themeSelect.value);
 });
+
+// ── Text size ──
+const TEXT_SIZES = ['normal', 'large', 'xl'];
+const EDITOR_PX  = { normal: 13, large: 16, xl: 20 };
+
+function applyTextSize(size) {
+  TEXT_SIZES.forEach(s => document.documentElement.classList.remove('size-' + s));
+  if (size !== 'normal') document.documentElement.classList.add('size-' + size);
+  const px = (EDITOR_PX[size] ?? EDITOR_PX.normal) + 'px';
+  editor.style.fontSize   = px;
+  overlay.style.fontSize  = px;
+  gutter.style.fontSize   = px;
+  outputEl.style.fontSize = px;
+  // Reset scroll so textarea/overlay stay pixel-aligned after font-size change
+  editor.scrollTop  = 0;
+  editor.scrollLeft = 0;
+  overlay.scrollTop  = 0;
+  overlay.scrollLeft = 0;
+  gutter.scrollTop   = 0;
+  try { localStorage.setItem('coral-text-size', size); } catch(e) {}
+}
+
+(function initTextSize() {
+  const saved = localStorage.getItem('coral-text-size');
+  const size  = TEXT_SIZES.includes(saved) ? saved : 'normal';
+  applyTextSize(size);
+  textSizeSelect.value = size;
+})();
+
+textSizeSelect.addEventListener('change', () => applyTextSize(textSizeSelect.value));
 
 // ── Help modal ──
 btnHelp.addEventListener('click', () => { helpModal.showModal(); btnHelpClose.focus(); });
