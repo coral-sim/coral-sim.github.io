@@ -279,7 +279,7 @@ Function GradePoints(integer grade) returns float points
    else
       points = 0.0
 
-Function Main() returns nothing nothing
+Function Main() returns nothing
    integer n
    integer i
    integer grade
@@ -353,7 +353,7 @@ Steps: 8
 Function CelsiusToFahrenheit(float c) returns float f
    f = c * 9.0 / 5.0 + 32.0
 
-Function Main() returns nothing nothing
+Function Main() returns nothing
    integer n
    integer i
    float temp
