@@ -1449,6 +1449,13 @@ const FC = {
   PARA_SHEAR: 12,
 };
 
+// Geometry tiers — applied via Object.assign(FC, FC_TIERS[size]) on text-size change
+const FC_TIERS = {
+  normal: { FONT_SIZE:12, NODE_W:160, NODE_H:40,  DIAMOND_W:180, DIAMOND_H:80,  OVAL_W:120, OVAL_H:36, VERT_GAP:28, BRANCH_OFFSET:230, CHARS_PER_LINE:22, PARA_SHEAR:12 },
+  large:  { FONT_SIZE:15, NODE_W:195, NODE_H:48,  DIAMOND_W:220, DIAMOND_H:97,  OVAL_W:145, OVAL_H:44, VERT_GAP:34, BRANCH_OFFSET:280, CHARS_PER_LINE:20, PARA_SHEAR:14 },
+  xl:     { FONT_SIZE:18, NODE_W:240, NODE_H:60,  DIAMOND_W:270, DIAMOND_H:120, OVAL_W:180, OVAL_H:54, VERT_GAP:42, BRANCH_OFFSET:345, CHARS_PER_LINE:18, PARA_SHEAR:18 },
+};
+
 let _nodeId = 0;
 function newNodeId() { return 'fc' + (++_nodeId); }
 
@@ -1932,9 +1939,10 @@ const themeSelect    = document.getElementById('theme-select');
 const textSizeSelect = document.getElementById('text-size-select');
 const helpModal      = document.getElementById('help-modal');
 const btnHelpClose   = document.getElementById('btn-help-close');
-const btnClearOutput = document.getElementById('btn-clear-output');
-const urlBanner      = document.getElementById('url-banner');
-const btnUrlClose    = document.getElementById('btn-url-banner-close');
+const btnClearOutput  = document.getElementById('btn-clear-output');
+const errorAnnounce   = document.getElementById('error-announce');
+const urlBanner       = document.getElementById('url-banner');
+const btnUrlClose     = document.getElementById('btn-url-banner-close');
 const panelCode      = document.getElementById('panel-code');
 const panelFlowchart = document.getElementById('panel-flowchart');
 const tabCode        = document.getElementById('tab-code');
@@ -1959,6 +1967,7 @@ let lineToNodeId = new Map();
 let forCondMap   = new Map();
 let forUpdateMap = new Map();
 let stepIndex = 0;
+let lastStepLine = null;
 let runTimer = null;
 let outputLineCount = 0;
 let currentOutputLine = null;
@@ -2104,6 +2113,7 @@ function exitToEdit() {
   genOutput = [];
   genInputQueue = [];
   stepIndex = 0;
+  lastStepLine = null;
   ast = null;
   flowchartGraph = null;
   lineToNodeId = new Map();
@@ -2141,6 +2151,7 @@ function advanceOneStep() {
 function applyStep(yieldValue) {
   const { loc, scope, callStack } = yieldValue;
   if (loc) {
+    lastStepLine = loc.line;
     highlightEditorLine(loc.line);
     syncFlowchartHighlight(loc.line, loc.part);
   } else {
@@ -2265,11 +2276,19 @@ function showError(e) {
   // Highlight line if available
   if (line) highlightEditorLine(line);
 
+  const text = (line ? `Line ${line}: ` : '') + msg + (hint ? '\n' + hint : '');
+
+  // Visible error in output log
   const div = document.createElement('div');
   div.className = 'out-error';
-  div.textContent = (line ? `Line ${line}: ` : '') + msg + (hint ? '\n' + hint : '');
+  div.textContent = text;
   outputEl.appendChild(div);
   outputEl.scrollTop = outputEl.scrollHeight;
+
+  // Assertive screen-reader announcement (WCAG 4.1.3) — clears then sets so
+  // repeated errors are always re-announced even if the text is identical.
+  errorAnnounce.textContent = '';
+  requestAnimationFrame(() => { errorAnnounce.textContent = 'Error: ' + text; });
 }
 
 // ── Editor: active line highlight ──
@@ -2524,6 +2543,14 @@ function renderFlowchart(activeNodeId) {
   flowchartSvg.setAttribute('height',  svgEl.getAttribute('height')  || '400');
   flowchartSvg.setAttribute('viewBox', svgEl.getAttribute('viewBox') || '0 0 600 400');
   chartRoot.innerHTML = svgEl.innerHTML;
+
+  // Update accessible description with node/edge count (WCAG 1.1.1 / 4.1.2)
+  const nodeCount = flowchartGraph.nodes ? flowchartGraph.nodes.length : 0;
+  const edgeCount = flowchartGraph.edges ? flowchartGraph.edges.length : 0;
+  flowchartSvg.setAttribute('aria-label',
+    `Program flowchart: ${nodeCount} node${nodeCount !== 1 ? 's' : ''}, ` +
+    `${edgeCount} connection${edgeCount !== 1 ? 's' : ''}.`);
+
   updateFcTransform();
 }
 
@@ -2585,6 +2612,31 @@ fcViewport.addEventListener('pointerleave', () => { fcPanActive = false; });
 btnFit.addEventListener('click', fitFlowchart);
 btnZoomIn.addEventListener('click',  () => { fcScale = Math.min(3, fcScale * 1.2); updateFcTransform(); });
 btnZoomOut.addEventListener('click', () => { fcScale = Math.max(0.2, fcScale / 1.2); updateFcTransform(); });
+
+// Flowchart keyboard navigation (WCAG 2.1.1) — zoom and pan without mouse
+// + / = → zoom in;  - → zoom out;  0 → fit;  Arrow keys → pan 40px
+fcViewport.setAttribute('tabindex', '0');
+fcViewport.setAttribute('aria-label',
+  'Flowchart view. Scroll to zoom, drag to pan. Keyboard: + zoom in, - zoom out, 0 fit, arrow keys pan.');
+fcViewport.addEventListener('keydown', e => {
+  if (!flowchartGraph) return;
+  const PAN = 40;
+  let handled = true;
+  switch (e.key) {
+    case '+': case '=':
+      fcScale = Math.min(3, fcScale * 1.2);   break;
+    case '-':
+      fcScale = Math.max(0.2, fcScale / 1.2); break;
+    case '0':
+      fitFlowchart(); return;
+    case 'ArrowLeft':  fcTx += PAN; break;
+    case 'ArrowRight': fcTx -= PAN; break;
+    case 'ArrowUp':    fcTy += PAN; break;
+    case 'ArrowDown':  fcTy -= PAN; break;
+    default: handled = false;
+  }
+  if (handled) { e.preventDefault(); updateFcTransform(); }
+});
 
 // ── Tabs ──
 tabCode.addEventListener('click',      () => switchToTab('code'));
@@ -2654,6 +2706,18 @@ function applyTextSize(size) {
   overlay.scrollTop  = 0;
   overlay.scrollLeft = 0;
   gutter.scrollTop   = 0;
+  // ── Flowchart geometry rescale ──
+  Object.assign(FC, FC_TIERS[size] ?? FC_TIERS.normal);
+  if (flowchartGraph && ast) {
+    try {
+      flowchartGraph = buildFlowchartGraph(ast);
+      lineToNodeId   = flowchartGraph.lineToNodeId;
+      forCondMap     = flowchartGraph.forCondMap;
+      forUpdateMap   = flowchartGraph.forUpdateMap;
+    } catch(e) { /* layout error — leave existing graph */ }
+    const activeId = lastStepLine ? lineToNodeId.get(lastStepLine) : null;
+    if (activeTab === 'flowchart') renderFlowchart(activeId ?? null);
+  }
   try { localStorage.setItem('coral-text-size', size); } catch(e) {}
 }
 
@@ -2686,6 +2750,27 @@ sampleSelect.addEventListener('change', () => {
 // ── URL banner ──
 btnUrlClose.addEventListener('click', () => { urlBanner.hidden = true; });
 
+// Escape key dismisses the URL banner (keyboard users)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !urlBanner.hidden && !helpModal.open) {
+    urlBanner.hidden = true;
+  }
+});
+
+// ── Auto-save code and inputs to localStorage (WCAG usability / learning disability support) ──
+let autoSaveTimer = null;
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem('coral-autosave-code',   editor.value);
+      localStorage.setItem('coral-autosave-inputs',  inputTextarea.value);
+    } catch(err) { /* storage full or blocked — silently ignore */ }
+  }, 800);
+}
+editor.addEventListener('input', scheduleAutoSave);
+inputTextarea.addEventListener('input', scheduleAutoSave);
+
 // ── URL parameter loading ──
 function loadUrlParams() {
   let params;
@@ -2717,5 +2802,20 @@ function loadUrlParams() {
 updateEditorUI();
 setState(STATE.EDIT);
 loadUrlParams();
+
+// Restore auto-saved work only when no URL params provided code
+(function restoreAutoSave() {
+  // If loadUrlParams already populated the editor (URL ?code= param), skip restore
+  if (editor.value.trim()) return;
+  try {
+    const savedCode   = localStorage.getItem('coral-autosave-code');
+    const savedInputs = localStorage.getItem('coral-autosave-inputs');
+    if (savedCode) {
+      editor.value = savedCode;
+      updateEditorUI();
+    }
+    if (savedInputs) inputTextarea.value = savedInputs;
+  } catch(err) { /* storage blocked — silently ignore */ }
+})();
 
 })();

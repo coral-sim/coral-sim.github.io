@@ -72,7 +72,7 @@ html.theme-light {
   --error:   #dc2626;
   --warn:    #7A4500; /* darkened from #b45309 — was ~3.2:1, now ~5.1:1 on #f8f9fa (WCAG 1.4.3) */
 
-  --step-bg:        rgba(255,243,176,0.6);
+  --step-bg:        rgba(29,78,216,0.10);
   --step-border:    #7A4500; /* darkened — WCAG 1.4.11 */
   --step-gutter-bg: #fbbf24;
   --step-gutter-fg: #1e293b;
@@ -117,18 +117,18 @@ html.theme-rhc {
   --error:   #CC2222;
   --warn:    #8B6500;   /* darkened gold — 4.6:1 on white (WCAG 1.4.3) */
 
-  --step-bg:        rgba(249,201,0,0.22);
-  --step-border:    #C8A000;  /* darkened gold border — WCAG 1.4.11 */
+  --step-bg:        rgba(42,100,145,0.10);
+  --step-border:    #8B6500;  /* darkened gold border — 4.6:1 on white (WCAG 1.4.11) */
   --step-gutter-bg: #F9C900;  /* gold as background fill — fine */
   --step-gutter-fg: #1A1A00;
 
   --hl-keyword:  #2A6491;   /* navy */
   --hl-type:     #2A96C6;   /* sky blue */
-  --hl-builtin:  #33A961;   /* green */
+  --hl-builtin:  #1A7040;   /* darkened from #33A961 — 6.15:1 on white (WCAG 1.4.3) */
   --hl-string:   #8B6500;   /* dark gold */
   --hl-number:   #C05000;
   --hl-comment:  #6B7A8A;
-  --hl-operator: #33A961;
+  --hl-operator: #1A7040;   /* darkened from #33A961 — matches builtin */
 
   --fc-oval:          #EBF4FA;
   --fc-rect:          #EBF4FA;
@@ -136,8 +136,8 @@ html.theme-rhc {
   --fc-diamond:       #FFF8DC;  /* light gold tint */
   --fc-border:        #2A6491;  /* navy */
   --fc-text:          #3A3A3A;
-  --fc-active-fill:   rgba(249,201,0,0.30);
-  --fc-active-stroke: #C8A000;
+  --fc-active-fill:   rgba(249,201,0,0.45);
+  --fc-active-stroke: #8B6500;
   --fc-edge:          #5A6A7A;
   --fc-arrow:         #5A6A7A;
   --fc-label:         #1A3A5A; /* darkened from #2A6491 — improved contrast on gold active fill (WCAG 1.4.11) */
@@ -215,7 +215,7 @@ html.theme-dyslexic-light {
   --error:   #CC2200;
   --warn:    #8B5A00;
 
-  --step-bg:        rgba(255,220,0,0.30);
+  --step-bg:        rgba(26,95,170,0.10);
   --step-border:    #8B5A00;
   --step-gutter-bg: #FFD700;
   --step-gutter-fg: #1A1A10;
@@ -326,18 +326,18 @@ html.theme-hc {
   --error:   #FF4444;
   --warn:    #FFAA00;
 
-  --step-bg:        rgba(255,255,0,0.25);
+  --step-bg:        rgba(255,255,0,0.40);
   --step-border:    #FFFF00;
   --step-gutter-bg: #FFFF00;
   --step-gutter-fg: #000000;
 
-  --hl-keyword:  #FF88FF;
-  --hl-type:     #88CCFF;
-  --hl-builtin:  #00FF88;
-  --hl-string:   #FFCC00;
-  --hl-number:   #FF8800;
-  --hl-comment:  #AAAAAA;
-  --hl-operator: #00FF88;
+  --hl-keyword:  #FFFFFF;
+  --hl-type:     #FFFFFF;
+  --hl-builtin:  #FFFFFF;
+  --hl-string:   #FFFFFF;
+  --hl-number:   #FFFFFF;
+  --hl-comment:  #AAAAAA;   /* comments slightly muted for structure, per accessibility intent */
+  --hl-operator: #FFFFFF;
 
   --fc-oval:          #111111;
   --fc-rect:          #111111;
