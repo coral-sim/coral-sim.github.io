@@ -784,6 +784,18 @@ input[type="range"]::-moz-range-thumb {
 
 input[type="range"]:disabled { opacity: 0.38; cursor: not-allowed; }
 
+/* ── Scrollbars (WebKit + Firefox) ── */
+/* Applied to every scrollable surface; uses theme tokens so dark themes
+   get dark scrollbars and light themes get light ones automatically. */
+::-webkit-scrollbar              { width: 8px; height: 8px; }
+::-webkit-scrollbar-track        { background: var(--surface); border-radius: 4px; }
+::-webkit-scrollbar-thumb        { background: var(--border);  border-radius: 4px; border: 2px solid var(--surface); }
+::-webkit-scrollbar-thumb:hover  { background: var(--muted); }
+::-webkit-scrollbar-corner       { background: var(--surface); }
+
+/* Firefox scrollbar colors */
+* { scrollbar-width: thin; scrollbar-color: var(--border) var(--surface); }
+
 /* ── Focus rings (WCAG 2.4.11) ── */
 button:focus-visible,
 select:focus-visible,
