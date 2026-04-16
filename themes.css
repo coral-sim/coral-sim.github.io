@@ -415,3 +415,59 @@ html.theme-synthwave header {
 html.theme-synthwave #btn-execute-edit {
   box-shadow: 0 0 8px rgba(255,45,120,0.45);
 }
+
+/* ══════════════════════════════════════════════════════════
+   VOYAGER  — Star Trek Voyager LCARS
+   Deep-space black-blue hull; LCARS teal/cyan as primary
+   accent; amber alert highlights; cool blue-white readout
+   text inspired by Voyager's astrometrics and bridge displays.
+   ══════════════════════════════════════════════════════════ */
+html.theme-voyager {
+  --bg:      #080C18;   /* deep space — near-black navy */
+  --surface: #0C1224;   /* console surface */
+  --panel:   #101830;   /* instrument panel */
+  --border:  #1E2E50;   /* LCARS panel divider */
+  --text:    #C0D4F0;   /* LCARS readout text — cool blue-white */
+  --muted:   #6888B0;   /* dimmed console label — 5.8:1 on bg (WCAG AA) */
+  --accent:  #4488DD;   /* Starfleet blue */
+  --accent2: #00C8C0;   /* LCARS teal */
+  --error:   #FF4422;   /* red alert */
+  --warn:    #FF9900;   /* LCARS amber */
+
+  --step-bg:        rgba(0,200,192,0.15);   /* teal active-line tint */
+  --step-border:    #00C8C0;
+  --step-gutter-bg: #00C8C0;
+  --step-gutter-fg: #000C0C;
+
+  /* All ratios verified against blended bg rgb(7,40,49) L≈0.018 — min 4.5:1 */
+  --hl-keyword:  #5599FF;   /* Starfleet blue     — 5.44:1 */
+  --hl-type:     #00D4C8;   /* LCARS teal         — 9.60:1 */
+  --hl-builtin:  #66CC88;   /* bio-neural green   — 7.80:1 */
+  --hl-string:   #FFAA44;   /* LCARS amber        — 8.17:1 */
+  --hl-number:   #FF7755;   /* red-alert coral    — 5.91:1 */
+  --hl-comment:  #7090B8;   /* dim console blue   — 5.03:1 */
+  --hl-operator: #00C8C0;   /* teal               — 9.47:1 */
+
+  --fc-oval:          #101830;
+  --fc-rect:          #101830;
+  --fc-para:          #101830;
+  --fc-diamond:       #0C0820;
+  --fc-border:        #4488DD;
+  --fc-text:          #C0D4F0;
+  --fc-active-fill:   rgba(0,200,192,0.20);
+  --fc-active-stroke: #00C8C0;
+  --fc-edge:          #3A5888;
+  --fc-arrow:         #3A5888;
+  --fc-label:         #FF9900;
+}
+
+/* Voyager LCARS header stripe — teal over navy */
+html.theme-voyager header {
+  border-bottom: 2px solid #00C8C0;
+  box-shadow: 0 1px 16px rgba(0,200,192,0.20);
+}
+
+/* Execute button glows teal like an active console */
+html.theme-voyager #btn-execute-edit {
+  box-shadow: 0 0 8px rgba(0,200,192,0.40);
+}

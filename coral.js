@@ -2666,7 +2666,7 @@ function switchToTab(name) {
 }
 
 // ── Theme select ──
-const THEMES = ['dark', 'rhc', 'rhc-dark', 'light', 'dyslexic-light', 'dyslexic-dark', 'hc', 'synthwave'];
+const THEMES = ['dark', 'rhc', 'rhc-dark', 'light', 'dyslexic-light', 'dyslexic-dark', 'hc', 'synthwave', 'voyager'];
 
 function applyTheme(name) {
   // Remove all theme classes, then add the one for non-default themes
