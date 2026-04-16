@@ -213,10 +213,11 @@ header h1 {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 4px 8px;
-  resize: none;
-  height: 44px;
+  resize: vertical;
+  height: 44px;    /* single line default */
+  min-height: 44px; /* can't drag smaller than one line */
   line-height: 1.4;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 #input-textarea::placeholder { color: var(--muted); } /* opacity removed — 0.7 opacity caused 4.23:1 failure (WCAG 1.4.3) */
