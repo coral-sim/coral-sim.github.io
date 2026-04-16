@@ -334,6 +334,10 @@ header h1 {
   pointer-events: none;
   background: var(--step-bg);
   border-left: 5px solid var(--step-border);
+  /* Vertical borders: 0px by default; 2px for High Contrast to form a full "box" indicator
+     without relying on background color alone (WCAG 1.4.1 non-color) */
+  border-top:    var(--step-border-v-width, 0px) solid var(--step-border);
+  border-bottom: var(--step-border-v-width, 0px) solid var(--step-border);
   z-index: 1;
   display: none;
 }

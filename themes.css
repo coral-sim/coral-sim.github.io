@@ -8,6 +8,7 @@
 /* ── Shared structural tokens (never theme-specific) ── */
 :root {
   --radius: 6px;
+  --step-border-v-width: 0px; /* vertical highlight borders: overridden to 2px in theme-hc */
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -35,11 +36,11 @@ html.theme-dark {
   --step-gutter-bg: #faff6e;
   --step-gutter-fg: #0f1117;
 
-  --hl-keyword:  #c084fc;
-  --hl-type:     #60a5fa;
+  --hl-keyword:  #D995FF; /* lightened from #c084fc — 3.75:1 on blended bg; now 4.57:1 (WCAG AA) */
+  --hl-type:     #6BB6FF; /* lightened from #60a5fa — 3.90:1 on blended bg; now 4.60:1 (WCAG AA) */
   --hl-builtin:  #34d399;
   --hl-string:   #fbbf24;
-  --hl-number:   #f97316;
+  --hl-number:   #FF9720; /* lightened from #f97316 — 3.53:1 on blended bg; now 4.58:1 (WCAG AA) */
   --hl-comment:  #b0bfd9; /* raised from #9ca3af — was ~2.9:1, now ~4.6:1 on #1a1b2e (WCAG 1.4.3) */
   --hl-operator: #7ee8a2;
 
@@ -81,7 +82,7 @@ html.theme-light {
   --hl-type:     #1d4ed8;
   --hl-builtin:  #065f46;
   --hl-string:   #92400e;
-  --hl-number:   #c2410c;
+  --hl-number:   #B93D0B; /* darkened from #c2410c — 4.22:1 on blended bg; now 4.58:1 (WCAG AA) */
   --hl-comment:  #545D69; /* darkened from #6b7280 — was ~4.0:1, now ~5.1:1 on #f8f9fa (WCAG 1.4.3) */
   --hl-operator: #166534;
 
@@ -123,11 +124,11 @@ html.theme-rhc {
   --step-gutter-fg: #1A1A00;
 
   --hl-keyword:  #2A6491;   /* navy */
-  --hl-type:     #2A96C6;   /* sky blue */
+  --hl-type:     #1E7399;   /* darkened from #2A96C6 — 2.91:1 on blended bg; now 4.60:1 (WCAG AA) */
   --hl-builtin:  #1A7040;   /* darkened from #33A961 — 6.15:1 on white (WCAG 1.4.3) */
   --hl-string:   #8B6500;   /* dark gold */
-  --hl-number:   #C05000;
-  --hl-comment:  #6B7A8A;
+  --hl-number:   #B64B00;   /* darkened from #C05000 — 4.16:1 on blended bg; now 4.57:1 (WCAG AA) */
+  --hl-comment:  #606D7C;   /* darkened from #6B7A8A — 3.83:1 on blended bg; now 4.59:1 (WCAG AA) */
   --hl-operator: #1A7040;   /* darkened from #33A961 — matches builtin */
 
   --fc-oval:          #EBF4FA;
@@ -170,13 +171,13 @@ html.theme-rhc-dark {
   --step-gutter-bg: #F9C900;
   --step-gutter-fg: #0A0800;
 
-  --hl-keyword:  #2A96C6;   /* sky blue */
+  --hl-keyword:  #34B4ED;   /* lightened from #2A96C6 — 3.24:1 on blended bg; now 4.60:1 (WCAG AA) */
   --hl-type:     #F9C900;   /* gold */
-  --hl-builtin:  #33A961;   /* green */
+  --hl-builtin:  #3BC06F;   /* lightened from #33A961 — 3.61:1 on blended bg; now 4.63:1 (WCAG AA) */
   --hl-string:   #F9D858;   /* lighter gold */
   --hl-number:   #E8A000;
-  --hl-comment:  #7A8A78;
-  --hl-operator: #33A961;
+  --hl-comment:  #9BAE98;   /* lightened from #7A8A78 — 2.96:1 on blended bg; now 4.60:1 (WCAG AA) */
+  --hl-operator: #3BC06F;   /* lightened from #33A961 — matches builtin */
 
   --fc-oval:          #1A3550;
   --fc-rect:          #1A3550;
@@ -225,7 +226,7 @@ html.theme-dyslexic-light {
   --hl-builtin:  #1A7A40;
   --hl-string:   #7A3500;
   --hl-number:   #A03000;
-  --hl-comment:  #777768;
+  --hl-comment:  #6A6A5D;   /* darkened from #777768 — 3.86:1 on blended bg; now 4.65:1 (WCAG AA) */
   --hl-operator: #1A7A40;
 
   --fc-oval:          #E8F0FF;
@@ -265,12 +266,12 @@ html.theme-dyslexic-dark {
   --step-gutter-bg: #E8C040;
   --step-gutter-fg: #1A1800;
 
-  --hl-keyword:  #C090F0;
+  --hl-keyword:  #C292F3;   /* lightened from #C090F0 — 4.48:1 on blended bg; now 4.59:1 (WCAG AA) */
   --hl-type:     #6AACE8;
   --hl-builtin:  #5CC880;
   --hl-string:   #E8C040;
-  --hl-number:   #F08050;
-  --hl-comment:  #888878;
+  --hl-number:   #FC8754;   /* lightened from #F08050 — 4.18:1 on blended bg; now 4.61:1 (WCAG AA) */
+  --hl-comment:  #A8A895;   /* lightened from #888878 — 3.08:1 on blended bg; now 4.59:1 (WCAG AA) */
   --hl-operator: #5CC880;
 
   --fc-oval:          #2A2818;
@@ -326,17 +327,18 @@ html.theme-hc {
   --error:   #FF4444;
   --warn:    #FFAA00;
 
-  --step-bg:        rgba(255,255,0,0.40);
-  --step-border:    #FFFF00;
-  --step-gutter-bg: #FFFF00;
-  --step-gutter-fg: #000000;
+  --step-bg:             transparent; /* no fill — indicator is border-only to preserve text contrast */
+  --step-border:         #FFFF00;
+  --step-border-v-width: 2px;         /* top + bottom borders create a visible box (WCAG 1.4.1) */
+  --step-gutter-bg:      #FFFF00;
+  --step-gutter-fg:      #000000;
 
   --hl-keyword:  #FFFFFF;
   --hl-type:     #FFFFFF;
   --hl-builtin:  #FFFFFF;
   --hl-string:   #FFFFFF;
   --hl-number:   #FFFFFF;
-  --hl-comment:  #AAAAAA;   /* comments slightly muted for structure, per accessibility intent */
+  --hl-comment:  #AAAAAA;   /* comments slightly muted for structure; 9.04:1 on #000 (WCAG AAA) */
   --hl-operator: #FFFFFF;
 
   --fc-oval:          #111111;
@@ -388,7 +390,7 @@ html.theme-synthwave {
   --hl-builtin:  #A8FF78;   /* neon green */
   --hl-string:   #FFE066;   /* yellow */
   --hl-number:   #FF9F40;   /* orange */
-  --hl-comment:  #7060A8;
+  --hl-comment:  #9480DC;   /* lightened from #7060A8 — 2.85:1 on blended bg; now 4.63:1 (WCAG AA) */
   --hl-operator: #00E5C8;
 
   --fc-oval:          #1E1040;
