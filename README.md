@@ -206,3 +206,13 @@ Ready to go beyond the built-in samples? See **[test-cases.md](test-cases.md)** 
 - Collatz sequence
 - Temperature conversion table with functions
 - Two-pass array algorithm (count values above average)
+
+---
+
+## Acknowledgments
+
+The Coral programming language was created by Frank Vahid, Roman Lysecky, and Alex Edgcomb.
+Learn more at [corallanguage.org/about/](https://corallanguage.org/about/).
+
+This simulator is an independent educational tool built for CIT 111 at Rio Hondo College.
+It is not affiliated with or endorsed by zyBooks.
