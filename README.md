@@ -214,5 +214,5 @@ Ready to go beyond the built-in samples? See **[test-cases.md](test-cases.md)** 
 The Coral programming language was created by Frank Vahid, Roman Lysecky, and Alex Edgcomb.
 Learn more at [corallanguage.org/about/](https://corallanguage.org/about/).
 
-This simulator is an independent educational tool built for CIT 111 at Rio Hondo College.
+This simulator is an independent educational tool built using Claude Code as an experiment for CIT 111 at Rio Hondo College.
 It is not affiliated with or endorsed by zyBooks.
