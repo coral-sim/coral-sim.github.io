@@ -942,6 +942,19 @@ a:focus-visible {
 
 /* ── Mobile responsive ── */
 @media (max-width: 768px) {
+  /* Allow full-page vertical scroll so the output section is reachable */
+  html {
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+  body {
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
   header {
     grid-template-columns: 1fr;
     height: auto;
@@ -953,10 +966,13 @@ a:focus-visible {
     flex-wrap: wrap;
   }
 
+  /* Definite pixel height required because flex:1 collapses when body is height:auto */
   #workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 160px;  /* editor fills available space, vars fixed 160px */
-    min-height: 320px;              /* ensures editor ≥ 160px even on small screens */
+    grid-template-rows: 300px 160px;  /* editor 300px, vars 160px */
+    height: 460px;
+    min-height: unset;
+    overflow: hidden;
   }
 
   /* #panel-code and #panel-flowchart already have grid-column:1 grid-row:1 in base CSS */
@@ -968,9 +984,32 @@ a:focus-visible {
     border-top: 2px solid var(--border);
   }
 
-  input[type="range"] { width: 70px; }
+  /* Hide line-number gutter — reclaims ~35px of editor width and avoids
+     gutter/visual-line misalignment when code wraps */
+  #gutter { display: none; }
 
-  #output-area { max-height: 40vh; }
+  /* Wrap long code lines so users don't need to scroll horizontally.
+     Both elements must share identical white-space rules so the
+     highlight overlay stays aligned with the textarea characters. */
+  #code-editor,
+  #highlight-overlay {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: hidden;
+  }
+
+  #editor-wrap { overflow-x: hidden; }
+
+  /* Output section: remove the 40vh cap and allow natural height so
+     the section is fully visible after scrolling past the workspace */
+  #output-area {
+    min-height: 150px;
+    max-height: none;
+    flex-shrink: 0;
+    overflow: hidden;   /* inner #output div has overflow-y:auto for long output */
+  }
+
+  input[type="range"] { width: 70px; }
 }
 
 @media (max-width: 480px) {
