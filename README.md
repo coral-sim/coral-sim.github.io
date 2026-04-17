@@ -1,6 +1,6 @@
 # Coral Sim
 
-A browser-based simulator for the [Coral programming language](https://corallanguage.org/spec/), designed for use in CIT-111. Write and step through Coral programs with live variable inspection and an auto-generated flowchart.
+A browser-based simulator for the [Coral programming language](https://corallanguage.org/spec/), designed for use in CIT 111. Write and step through Coral programs with live variable inspection and an auto-generated flowchart.
 
 No installation required — open `index.html` in any modern browser.
 
@@ -22,7 +22,8 @@ The code editor is on the left side of the workspace. It includes:
 
 - **Syntax highlighting** — keywords, types, built-ins, strings, and numbers are color-coded.
 - **Line numbers** — in the gutter to the left of the code.
-- **Active line highlight** — a yellow-bordered bar marks the line currently being executed during stepping.
+- **Active line highlight** — a colored bar marks the line currently being executed during stepping.
+- **Auto-save** — your code and inputs are automatically saved to the browser. If you accidentally close or refresh the page, your work is restored on next open (unless code was pre-loaded from a shared URL).
 
 **Tab key** inserts three spaces. Coral requires 3-space indentation for all nested blocks.
 
@@ -41,7 +42,7 @@ To move keyboard focus out of the editor without the mouse, press **Escape** fir
 | **Run** | Ready or Paused | Runs automatically at the selected speed. |
 | **Pause** | Running | Pauses auto-run so you can inspect variables or step manually. |
 | **Speed slider** | Execution mode | Controls auto-run speed. Left = slowest (~3 sec/step). Right = fastest (~0.75 sec/step). |
-| **Instant ⏬** | Ready or Paused | Runs the entire program immediately and shows the final output and variable state. |
+| **Instant ⏭** | Ready or Paused | Runs the entire program immediately and shows the final output and variable state. |
 
 ---
 
@@ -75,6 +76,8 @@ Example — for a program that reads three numbers:
 10 3 -1
 ```
 
+The input box is single-line by default. Drag the bottom edge to expand it for longer input lists — the values can span multiple lines and will still be read correctly.
+
 ---
 
 ## Variables Panel
@@ -97,10 +100,45 @@ After pressing Execute on a program **without** user-defined functions, switch t
 - **Drag** — pan around the diagram
 - **Fit** button — resets zoom to fit the entire chart on screen
 - **+** / **−** buttons — manual zoom steps
+- **Keyboard (when flowchart is focused):** `+` zoom in, `-` zoom out, `0` fit, Arrow keys pan
 
 During stepping, the active flowchart node is highlighted in sync with the editor.
 
 > Flowcharts are not generated for programs that use `Function` definitions.
+
+---
+
+## Color Themes
+
+Use the **theme selector** in the header to switch color themes. Your choice is saved and restored on the next visit.
+
+| Theme | Description |
+|---|---|
+| Classic Light | Clean white background with blue accent |
+| Dyslexic Dark | Dark background, Lexend font, extra letter-spacing and line-height |
+| Dyslexic Light | Light background, Lexend font, extra letter-spacing and line-height |
+| High Contrast | Black/white with yellow highlight border — no color-only cues |
+| Midnight Blue | Deep navy dark theme |
+| Roadrunner Dark | RHC dark theme |
+| Roadrunner Light | RHC light theme |
+| Synthwave | Retro purple/pink neon dark theme |
+| Voyager | Space inspired deep navy and teal |
+
+All themes meet WCAG AA contrast requirements (4.5:1) for syntax-highlighted code on both normal and highlighted lines.
+
+---
+
+## Text Size
+
+Use the **Text Size selector** in the header to scale the entire interface:
+
+| Option | Best for |
+|---|---|
+| Normal | Default desktop use |
+| Large | Larger monitors or personal preference |
+| XL / Projector | Classroom display — readable from the back of the room |
+
+Text size scales the entire UI, including the flowchart geometry and node sizes. Your selection is saved and restored on the next visit.
 
 ---
 
