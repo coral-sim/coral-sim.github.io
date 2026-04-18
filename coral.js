@@ -2292,25 +2292,101 @@ function showError(e) {
 }
 
 // ── Editor: active line highlight ──
+//
+// Line positions are calculated using a hidden DOM measurement div rather than
+// CSS math (getComputedStyle().lineHeight). DOM measurement uses the browser's own
+// layout engine, so Chrome and Safari agree exactly — CSS-parsed line-height values
+// can differ subtly between browsers and cause the highlight to drift over many lines.
+
+let _lineMeasureDiv = null;
+
+function ensureLineMeasureDiv() {
+  if (_lineMeasureDiv) return;
+  _lineMeasureDiv = document.createElement('div');
+  _lineMeasureDiv.setAttribute('aria-hidden', 'true');
+  _lineMeasureDiv.style.cssText =
+    'position:absolute;top:-9999px;left:-9999px;' +
+    'visibility:hidden;pointer-events:none;' +
+    'white-space:pre-wrap;overflow-wrap:anywhere;' +
+    'padding:0;margin:0;border:0;';
+  document.body.appendChild(_lineMeasureDiv);
+}
+
+// Configures the measurement div to match the editor's content-area width and font.
+function configMeasureDiv(cs) {
+  const d      = _lineMeasureDiv;
+  const pLeft  = parseFloat(cs.paddingLeft)  || 8;
+  const pRight = parseFloat(cs.paddingRight) || 8;
+  d.style.width      = Math.max(1, editor.clientWidth - pLeft - pRight) + 'px';
+  d.style.fontFamily = cs.fontFamily;
+  d.style.fontSize   = cs.fontSize;
+  d.style.lineHeight = cs.lineHeight;
+}
+
+// Returns the pixel top-offset (from the editor content area top) of lineNum.
+// Desktop (white-space:pre): fast CSS formula.
+// Mobile (white-space:pre-wrap): DOM measurement so Safari and Chrome agree.
+function getVisualLineTop(lineNum, paddingTop, cs) {
+  if (cs.whiteSpace !== 'pre-wrap') {
+    const lh = parseFloat(cs.lineHeight) || 20.8;
+    return paddingTop + (lineNum - 1) * lh;
+  }
+  if (lineNum <= 1) return paddingTop;
+
+  ensureLineMeasureDiv();
+  configMeasureDiv(cs);
+  const d     = _lineMeasureDiv;
+  const lines = editor.value.split('\n');
+
+  // Fill with lines 1..(lineNum-1) plus a one-character sentinel on a new line.
+  // The sentinel ensures empty preceding lines are measured correctly.
+  // scrollHeight = visual height of those (lineNum-1) lines + one sentinel line.
+  d.textContent = lines.slice(0, lineNum - 1).join('\n') + '\nx';
+  const totalH = d.getBoundingClientRect().height;
+
+  // Measure a single sentinel line to get the true browser-rendered line height,
+  // then subtract it — leaving only the height of the (lineNum-1) preceding lines.
+  d.textContent = 'x';
+  const oneLineH = d.getBoundingClientRect().height;
+
+  return paddingTop + Math.max(0, totalH - oneLineH);
+}
+
+// Returns the visual height of the active line (covers multiple line-heights when
+// the line wraps on mobile).
+function getActiveLineHeight(lineNum, cs) {
+  if (cs.whiteSpace !== 'pre-wrap') {
+    return parseFloat(cs.lineHeight) || 20.8;
+  }
+  ensureLineMeasureDiv();
+  configMeasureDiv(cs);
+  const d          = _lineMeasureDiv;
+  const activeLine = editor.value.split('\n')[lineNum - 1] ?? '';
+  // Use a non-breaking space for empty lines to ensure a proper text box is created.
+  d.textContent = activeLine || '\u00a0';
+  return d.getBoundingClientRect().height;
+}
+
 function highlightEditorLine(lineNum) {
   if (!lineNum) { clearActiveLineHighlight(); return; }
-  const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 20.8;
-  const paddingTop = parseFloat(getComputedStyle(editor).paddingTop)  || 8;
-  const top = paddingTop + (lineNum - 1) * lineHeight;
+  const cs         = getComputedStyle(editor);
+  const paddingTop = parseFloat(cs.paddingTop) || 8;
+  const top        = getVisualLineTop(lineNum, paddingTop, cs);
+  const hlHeight   = getActiveLineHeight(lineNum, cs);
 
   activeLineDiv.style.display = 'block';
-  activeLineDiv.style.top  = top + 'px';
-  activeLineDiv.style.height = lineHeight + 'px';
+  activeLineDiv.style.top    = top + 'px';
+  activeLineDiv.style.height = hlHeight + 'px';
 
-  // Gutter highlight
+  // Gutter highlight (no-op on mobile where the gutter is hidden)
   document.querySelectorAll('.gutter-line').forEach((el, idx) => {
     el.classList.toggle('active', idx + 1 === lineNum);
   });
 
-  // Scroll editor to show line
+  // Scroll editor to keep the active line in view
   const editorRect = editor.getBoundingClientRect();
   const lineTop    = top - editor.scrollTop;
-  if (lineTop < 0 || lineTop > editorRect.height - lineHeight) {
+  if (lineTop < 0 || lineTop > editorRect.height - hlHeight) {
     editor.scrollTop = top - editorRect.height / 2;
   }
 }

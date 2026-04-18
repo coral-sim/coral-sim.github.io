@@ -724,19 +724,36 @@ button:disabled {
 }
 
 /* ── Selects ── */
+/* appearance:none removes Safari's native menulist rendering so CSS controls the
+   height exactly. A custom SVG chevron replaces the native dropdown arrow. */
 select {
   font-family: var(--sans);
   font-size: 0.82rem;
-  padding: 6px 10px;
+  padding: 6px 30px 6px 10px;       /* extra right padding for the custom arrow */
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background-color: var(--surface);  /* background-color, not shorthand, so
+                                        background-image below is not reset */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23aaaaaa'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px 6px;
   color: var(--text);
   cursor: pointer;
-  min-height: 44px; /* WCAG 2.5.5 — 44px touch target */
+  height: 44px;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 select:disabled { opacity: 0.38; cursor: not-allowed; }
+
+/* Light themes need a darker arrow for contrast against the light surface */
+html.theme-light select,
+html.theme-rhc select,
+html.theme-dyslexic-light select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555555'/%3E%3C/svg%3E");
+}
 
 /* ── Range slider ── */
 input[type="range"] {
@@ -1016,7 +1033,7 @@ a:focus-visible {
   /* Tighten toolbar layout on very small screens but keep 44px touch targets (WCAG 2.5.5) */
   #toolbar { gap: 4px; padding: 4px 8px; }
   button { padding: 4px 10px; font-size: 0.82rem; }
-  select { padding: 4px 8px; font-size: 0.82rem; }
+  select { padding: 4px 28px 4px 8px; font-size: 0.82rem; } /* preserve right gap for arrow */
 }
 
 /* ── Assertive error announce (screen reader only) ── */
