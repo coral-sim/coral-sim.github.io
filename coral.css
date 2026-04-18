@@ -138,6 +138,15 @@ header h1 {
   flex-shrink: 0;
 }
 
+/* Keeps the Speed label and slider together as one unit so they always
+   wrap to the same row instead of splitting across rows on narrow screens. */
+.speed-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .speed-label {
   font-size: 0.82rem;
   color: var(--muted);
@@ -734,10 +743,10 @@ select {
   border-radius: var(--radius);
   background-color: var(--surface);  /* background-color, not shorthand, so
                                         background-image below is not reset */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23aaaaaa'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTQgOSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwIDcgOSAxNCAweiIgZmlsbD0iI2FhYWFhYSIvPjwvc3ZnPg==");
   background-repeat: no-repeat;
   background-position: right 10px center;
-  background-size: 10px 6px;
+  background-size: 14px 9px;
   color: var(--text);
   cursor: pointer;
   height: 44px;
@@ -752,7 +761,7 @@ select:disabled { opacity: 0.38; cursor: not-allowed; }
 html.theme-light select,
 html.theme-rhc select,
 html.theme-dyslexic-light select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555555'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTQgOSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwIDcgOSAxNCAweiIgZmlsbD0iIzU1NTU1NSIvPjwvc3ZnPg==");
 }
 
 /* ── Range slider ── */

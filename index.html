@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; script-src 'self'; img-src 'none'; connect-src 'none'; form-action 'none';">
+        content="default-src 'none'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; script-src 'self'; img-src data:; connect-src 'none'; form-action 'none';">
   <title>Coral Sim</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="themes.css?v=9">
-  <link rel="stylesheet" href="coral.css?v=30">
+  <link rel="stylesheet" href="coral.css?v=34">
 </head>
 <body>
 
@@ -79,12 +79,14 @@
     <button id="btn-restart" disabled aria-label="Restart execution from beginning">&#x21BA; Restart</button>
     <button id="btn-run-pause" disabled aria-label="Run program" aria-pressed="false">Run</button>
     <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
-    <label for="speed-slider" class="speed-label">Speed</label>
-    <input type="range" id="speed-slider" min="1" max="9" value="5" disabled
-           aria-label="Execution speed" aria-valuemin="1" aria-valuemax="9" aria-valuenow="5"
-           aria-valuetext="Medium (step every 1.2 seconds)">
-    <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
     <button id="btn-instant" disabled aria-label="Run to completion instantly">Instant &#9197;</button>
+    <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
+    <div class="speed-group">
+      <label for="speed-slider" class="speed-label">Speed</label>
+      <input type="range" id="speed-slider" min="1" max="9" value="5" disabled
+             aria-label="Execution speed" aria-valuemin="1" aria-valuemax="9" aria-valuenow="5"
+             aria-valuetext="Medium (step every 1.2 seconds)">
+    </div>
   </div>
 
   <!-- Input area -->
