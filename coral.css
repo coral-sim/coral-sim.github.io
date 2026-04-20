@@ -296,7 +296,7 @@ header h1 {
 #editor-wrap {
   flex: 1;
   display: flex;
-  overflow: auto;
+  overflow: hidden;
   background: var(--bg);
   font-family: var(--mono);
   font-size: 13px;
@@ -319,6 +319,7 @@ header h1 {
   position: sticky;
   left: 0;
   z-index: 2;
+  overflow: hidden;
 }
 
 .gutter-line {

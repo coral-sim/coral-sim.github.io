@@ -282,14 +282,23 @@ class Parser {
     const params = this.parseParamList();
     this.eat(TK.RPAREN, `Expected ')' after parameter list`);
     this.eat(TK.RETURNS, `Expected 'returns' after ')'`);
-    // ReturnSpec: 'nothing' | Type Name
-    let returnType, returnVar;
+    // ReturnSpec: 'nothing' | Type [array(N)] Name
+    let returnType, returnVar, returnIsArray = false, returnArraySize = null;
     if (this.check(TK.NOTHING)) {
       this.advance(); // consume 'nothing'
       returnType = 'nothing'; returnVar = null;
     } else if (this.check(TK.INTEGER) || this.check(TK.FLOAT)) {
       const rt = this.advance();
       returnType = rt.type === TK.INTEGER ? 'integer' : 'float';
+      if (this.check(TK.ARRAY)) {
+        this.advance(); // consume 'array'
+        this.eat(TK.LPAREN, `Expected '(' after 'array' in return type`);
+        if (this.check(TK.QUESTION)) { this.advance(); returnArraySize = null; }
+        else if (this.peek().type === TK.INT_LIT) { returnArraySize = Number(this.advance().value); }
+        else throw ParseError(`Expected array size or '?'`, this.getLine());
+        this.eat(TK.RPAREN, `Expected ')' after array size in return type`);
+        returnIsArray = true;
+      }
       returnVar = this.eatName();
       validateIdentifier(returnVar, this.getLine());
     } else {
@@ -297,7 +306,7 @@ class Parser {
     }
     this.eat(TK.NEWLINE, `Expected newline after function signature`);
     const body = this.parseBlock(3);
-    return { type:'FunctionDef', name, params, returnVar, returnType, body, line };
+    return { type:'FunctionDef', name, params, returnVar, returnType, returnIsArray, returnArraySize, body, line };
   }
 
   parseParamList() {
@@ -317,12 +326,14 @@ class Parser {
       throw ParseError(`Expected parameter type (integer or float)`, line);
     const typeToken = this.advance();
     const ptype = typeToken.type === TK.INTEGER ? 'integer' : 'float';
-    // Check for array param: float array(?) name
+    // Check for array param: integer array(?) name  OR  integer array(9) name
     let isArray = false;
     if (this.check(TK.ARRAY)) {
       this.advance();
       this.eat(TK.LPAREN, `Expected '(' after 'array'`);
-      this.eat(TK.QUESTION, `Expected '?'`);
+      if (this.check(TK.QUESTION)) { this.advance(); }
+      else if (this.peek().type === TK.INT_LIT) { this.advance(); }
+      else throw ParseError(`Expected array size or '?'`, this.getLine());
       this.eat(TK.RPAREN, `Expected ')'`);
       isArray = true;
     }
@@ -814,9 +825,6 @@ class Scope {
     const entry = this._vars.get(name);
     if (!entry) throw RuntimeError(`Variable '${name}' is not declared`, line,
       `Line ${line}: '${name}' has not been declared. Add 'integer ${name}' or 'float ${name}' at the top of your function.`);
-    if (!entry.initialized && !(entry.value instanceof CoralArray))
-      throw RuntimeError(`Variable '${name}' used before assignment`, line,
-        `Line ${line}: '${name}' has been declared but not yet assigned a value.`);
     return entry.value;
   }
 
@@ -961,14 +969,23 @@ class Interpreter {
       `Line ${node.line}: '${node.name}' is not defined.`);
 
     const fnScope = new Scope();
-    // Bind params
+    // Bind params — array params passed by reference (same CoralArray object)
     fn.params.forEach((p, i) => {
       const argVal = this.eval(node.args[i], scope);
-      fnScope.declare(p.name, 0, p.ptype);
-      fnScope.set(p.name, this.coerce(argVal, p.ptype, node.line), node.line);
+      if (p.isArray) {
+        fnScope.declare(p.name, argVal, p.ptype + '[]');
+        fnScope.set(p.name, argVal, node.line);
+      } else {
+        fnScope.declare(p.name, 0, p.ptype);
+        fnScope.set(p.name, this.coerce(argVal, p.ptype, node.line), node.line);
+      }
     });
     if (fn.returnVar) {
-      fnScope.declare(fn.returnVar, fn.returnType === 'integer' ? 0 : 0.0, fn.returnType);
+      if (fn.returnIsArray) {
+        fnScope.declare(fn.returnVar, new CoralArray(fn.returnArraySize ?? null, fn.returnType), fn.returnType + '[]');
+      } else {
+        fnScope.declare(fn.returnVar, fn.returnType === 'integer' ? 0 : 0.0, fn.returnType);
+      }
     }
     // Declare all local vars
     fn.body.forEach(s => this._declareVars(s, fnScope));
@@ -1231,12 +1248,22 @@ function* genCall(callNode, scope, ctx) {
   const argVals = callNode.args.map(a => ctx.interp.eval(a, scope));
   const fnScope = new Scope();
 
+  // Bind params — array params passed by reference (same CoralArray object)
   fn.params.forEach((p, i) => {
-    fnScope.declare(p.name, 0, p.ptype);
-    fnScope.set(p.name, ctx.interp.coerce(argVals[i], p.ptype, callNode.line), callNode.line);
+    if (p.isArray) {
+      fnScope.declare(p.name, argVals[i], p.ptype + '[]');
+      fnScope.set(p.name, argVals[i], callNode.line);
+    } else {
+      fnScope.declare(p.name, 0, p.ptype);
+      fnScope.set(p.name, ctx.interp.coerce(argVals[i], p.ptype, callNode.line), callNode.line);
+    }
   });
   if (fn.returnVar) {
-    fnScope.declare(fn.returnVar, fn.returnType === 'integer' ? 0 : 0.0, fn.returnType);
+    if (fn.returnIsArray) {
+      fnScope.declare(fn.returnVar, new CoralArray(null, fn.returnType), fn.returnType + '[]');
+    } else {
+      fnScope.declare(fn.returnVar, fn.returnType === 'integer' ? 0 : 0.0, fn.returnType);
+    }
   }
 
   const frame = { label: fn.name, scope: fnScope, kind: 'function',

@@ -1,1 +1,3 @@
 .claude
+tests/*
+.DS_store
