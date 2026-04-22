@@ -1478,9 +1478,10 @@ const FC = {
 
 // Geometry tiers — applied via Object.assign(FC, FC_TIERS[size]) on text-size change
 const FC_TIERS = {
-  normal: { FONT_SIZE:12, NODE_W:160, NODE_H:40,  DIAMOND_W:180, DIAMOND_H:80,  OVAL_W:120, OVAL_H:36, VERT_GAP:28, BRANCH_OFFSET:230, CHARS_PER_LINE:22, PARA_SHEAR:12 },
-  large:  { FONT_SIZE:15, NODE_W:195, NODE_H:48,  DIAMOND_W:220, DIAMOND_H:97,  OVAL_W:145, OVAL_H:44, VERT_GAP:34, BRANCH_OFFSET:280, CHARS_PER_LINE:20, PARA_SHEAR:14 },
-  xl:     { FONT_SIZE:18, NODE_W:240, NODE_H:60,  DIAMOND_W:270, DIAMOND_H:120, OVAL_W:180, OVAL_H:54, VERT_GAP:42, BRANCH_OFFSET:345, CHARS_PER_LINE:18, PARA_SHEAR:18 },
+  normal:    { FONT_SIZE:12, NODE_W:160, NODE_H:40,  DIAMOND_W:180, DIAMOND_H:80,  OVAL_W:120, OVAL_H:36, VERT_GAP:28, BRANCH_OFFSET:230, CHARS_PER_LINE:22, PARA_SHEAR:12 },
+  large:     { FONT_SIZE:15, NODE_W:195, NODE_H:48,  DIAMOND_W:220, DIAMOND_H:97,  OVAL_W:145, OVAL_H:44, VERT_GAP:34, BRANCH_OFFSET:280, CHARS_PER_LINE:20, PARA_SHEAR:14 },
+  xl:        { FONT_SIZE:18, NODE_W:240, NODE_H:60,  DIAMOND_W:270, DIAMOND_H:120, OVAL_W:180, OVAL_H:54, VERT_GAP:42, BRANCH_OFFSET:345, CHARS_PER_LINE:18, PARA_SHEAR:18 },
+  projector: { FONT_SIZE:22, NODE_W:300, NODE_H:75,  DIAMOND_W:340, DIAMOND_H:150, OVAL_W:225, OVAL_H:68, VERT_GAP:52, BRANCH_OFFSET:430, CHARS_PER_LINE:16, PARA_SHEAR:22 },
 };
 
 let _nodeId = 0;
@@ -2792,8 +2793,8 @@ themeSelect.addEventListener('change', () => {
 });
 
 // ── Text size ──
-const TEXT_SIZES = ['normal', 'large', 'xl'];
-const EDITOR_PX  = { normal: 13, large: 16, xl: 20 };
+const TEXT_SIZES = ['normal', 'large', 'xl', 'projector'];
+const EDITOR_PX  = { normal: 13, large: 16, xl: 20, projector: 25 };
 
 function applyTextSize(size) {
   TEXT_SIZES.forEach(s => document.documentElement.classList.remove('size-' + s));

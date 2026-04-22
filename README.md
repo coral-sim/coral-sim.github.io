@@ -136,7 +136,8 @@ Use the **Text Size selector** in the header to scale the entire interface:
 |---|---|
 | Normal | Default desktop use |
 | Large | Larger monitors or personal preference |
-| XL / Projector | Classroom display — readable from the back of the room |
+| Extra Large | Large monitors or accessibility needs |
+| Projector | Classroom display — readable from the back of the room |
 
 Text size scales the entire UI, including the flowchart geometry and node sizes. Your selection is saved and restored on the next visit.
 
