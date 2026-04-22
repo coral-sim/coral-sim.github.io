@@ -114,13 +114,13 @@ Use the **theme selector** in the header to switch color themes. Your choice is 
 
 | Theme | Description |
 |---|---|
+| Classroom | Pure white background with deep, high-saturation syntax colors — designed for college classrooms with mixed fluorescent and natural light where projectors wash out |
 | Classic Light | Clean white background with blue accent |
 | Dyslexic Dark | Dark background, Lexend font, extra letter-spacing and line-height |
 | Dyslexic Light | Light background, Lexend font, extra letter-spacing and line-height |
 | High Contrast | Black/white with yellow highlight border — no color-only cues |
 | Midnight Blue | Deep navy dark theme |
 | Roadrunner Dark | RHC dark theme |
-| Roadrunner Light | RHC light theme |
 | Synthwave | Retro purple/pink neon dark theme |
 | Voyager | Space inspired deep navy and teal |
 

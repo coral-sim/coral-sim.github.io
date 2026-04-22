@@ -766,8 +766,8 @@ select:disabled { opacity: 0.38; cursor: not-allowed; }
 
 /* Light themes need a darker arrow for contrast against the light surface */
 html.theme-light select,
-html.theme-rhc select,
-html.theme-dyslexic-light select {
+html.theme-dyslexic-light select,
+html.theme-classroom select {
   background-image: url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTQgOSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwIDcgOSAxNCAweiIgZmlsbD0iIzU1NTU1NSIvPjwvc3ZnPg==");
 }
 

@@ -2770,7 +2770,7 @@ function switchToTab(name) {
 }
 
 // ── Theme select ──
-const THEMES = ['dark', 'rhc', 'rhc-dark', 'light', 'dyslexic-light', 'dyslexic-dark', 'hc', 'synthwave', 'voyager'];
+const THEMES = ['dark', 'rhc-dark', 'light', 'classroom', 'dyslexic-light', 'dyslexic-dark', 'hc', 'synthwave', 'voyager'];
 
 function applyTheme(name) {
   // Remove all theme classes, then add the one for non-default themes
@@ -2783,7 +2783,7 @@ function applyTheme(name) {
 
 (function initTheme() {
   const saved = localStorage.getItem('coral-theme');
-  const theme = THEMES.includes(saved) ? saved : 'rhc';
+  const theme = THEMES.includes(saved) ? saved : 'classroom';
   applyTheme(theme);
   themeSelect.value = theme;
 })();

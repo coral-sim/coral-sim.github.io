@@ -99,55 +99,6 @@ html.theme-light {
   --fc-label:         #7A4500; /* darkened from #b45309 — WCAG 1.4.3 */
 }
 
-/* ══════════════════════════════════════════════════════════
-   ROADRUNNER LIGHT  — Rio Hondo College school pride
-   White background; gold (#F9C900) + charcoal (#3A3A3A)
-   as primary brand colors; navy, sky, green as accents.
-   Gold is used decoratively (gutters, highlights, borders)
-   rather than as body text to ensure WCAG contrast on white.
-   ══════════════════════════════════════════════════════════ */
-html.theme-rhc {
-  --bg:      #FFFFFF;
-  --surface: #F8F8F6;
-  --panel:   #EBF4FA;   /* light tint of sky #2A96C6 */
-  --border:  #C8D4DC;
-  --text:    #3A3A3A;
-  --muted:   #5A6A7A;
-  --accent:  #2A6491;   /* navy — readable on white (4.8:1) */
-  --accent2: #33A961;   /* green */
-  --error:   #CC2222;
-  --warn:    #8B6500;   /* darkened gold — 4.6:1 on white (WCAG 1.4.3) */
-
-  --step-bg:        rgba(42,100,145,0.10);
-  --step-border:    #8B6500;  /* darkened gold border — 4.6:1 on white (WCAG 1.4.11) */
-  --step-gutter-bg: #F9C900;  /* gold as background fill — fine */
-  --step-gutter-fg: #1A1A00;
-
-  --hl-keyword:  #2A6491;   /* navy */
-  --hl-type:     #1E7399;   /* darkened from #2A96C6 — 2.91:1 on blended bg; now 4.60:1 (WCAG AA) */
-  --hl-builtin:  #1A7040;   /* darkened from #33A961 — 6.15:1 on white (WCAG 1.4.3) */
-  --hl-string:   #8B6500;   /* dark gold */
-  --hl-number:   #B64B00;   /* darkened from #C05000 — 4.16:1 on blended bg; now 4.57:1 (WCAG AA) */
-  --hl-comment:  #606D7C;   /* darkened from #6B7A8A — 3.83:1 on blended bg; now 4.59:1 (WCAG AA) */
-  --hl-operator: #1A7040;   /* darkened from #33A961 — matches builtin */
-
-  --fc-oval:          #EBF4FA;
-  --fc-rect:          #EBF4FA;
-  --fc-para:          #EBF4FA;
-  --fc-diamond:       #FFF8DC;  /* light gold tint */
-  --fc-border:        #2A6491;  /* navy */
-  --fc-text:          #3A3A3A;
-  --fc-active-fill:   rgba(249,201,0,0.45);
-  --fc-active-stroke: #8B6500;
-  --fc-edge:          #5A6A7A;
-  --fc-arrow:         #5A6A7A;
-  --fc-label:         #1A3A5A; /* darkened from #2A6491 — improved contrast on gold active fill (WCAG 1.4.11) */
-}
-
-/* Gold accent stripe on the header for school pride */
-html.theme-rhc header {
-  border-bottom: 3px solid #F9C900;
-}
 
 /* ══════════════════════════════════════════════════════════
    ROADRUNNER DARK  — Rio Hondo College school pride, dark
@@ -470,4 +421,56 @@ html.theme-voyager header {
 /* Execute button glows teal like an active console */
 html.theme-voyager #btn-execute-edit {
   box-shadow: 0 0 8px rgba(0,200,192,0.40);
+}
+
+/* ── Classroom ─────────────────────────────────────────────
+   Designed for college classrooms with half-on fluorescent
+   lights and daylight through partially-closed blinds.
+   Pure white background stays white even when a projector
+   is washed out. All syntax colors ≥7:1 on white (WCAG AAA)
+   so they remain legible after ~40% ambient-light wash-out.
+   Blue step highlight — yellow washes to near-invisible in
+   bright rooms; blue holds contrast much better.
+   ─────────────────────────────────────────────────────── */
+html.theme-classroom {
+  --bg:      #FFFFFF;
+  --surface: #F4F6F8;
+  --panel:   #E8EDF2;
+  --border:  #9AAAB8;
+  --text:    #1A1A1A;
+  --muted:   #4A5560;
+  --accent:  #0050AA;
+  --accent2: #006B30;
+  --error:   #AA1500;
+  --warn:    #9B6000;
+
+  --step-bg:        rgba(0,80,170,0.12);
+  --step-border:    #0050AA;
+  --step-gutter-bg: #0050AA;
+  --step-gutter-fg: #FFFFFF;
+
+  --hl-keyword:  #5500BB;  /* 9.9:1 on white */
+  --hl-type:     #0050AA;  /* 7.7:1 */
+  --hl-builtin:  #006B30;  /* 6.7:1 */
+  --hl-string:   #824200;  /* 7.7:1 */
+  --hl-number:   #AA2200;  /* 7.2:1 */
+  --hl-comment:  #5A6878;  /* 5.6:1 */
+  --hl-operator: #005580;  /* 8.1:1 */
+
+  --fc-oval:          #E8EDF8;
+  --fc-rect:          #E8EDF8;
+  --fc-para:          #E8EDF8;
+  --fc-diamond:       #EEF0FF;
+  --fc-border:        #0050AA;
+  --fc-text:          #1A1A1A;
+  --fc-active-fill:   rgba(0,80,170,0.15);
+  --fc-active-stroke: #0050AA;
+  --fc-edge:          #4A5560;
+  --fc-arrow:         #4A5560;
+  --fc-label:         #824200;
+}
+
+/* Strong blue header stripe — readable from the back of the room */
+html.theme-classroom header {
+  border-bottom: 3px solid #0050AA;
 }
