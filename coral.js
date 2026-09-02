@@ -2016,6 +2016,11 @@ const SAMPLES = {
     label: 'Function Example (F→C)',
     code: `Function FahrenheitToCelsius(float fahr) returns float celsius\n   celsius = (fahr - 32.0) * 5.0 / 9.0\n\nFunction Main() returns nothing\n   float temp\n   float result\n   temp = Get next input\n   result = FahrenheitToCelsius(temp)\n   Put "Celsius: " to output\n   Put result with 1 decimal places to output`,
     inputs: '98.6'
+  },
+  division: {
+    label: 'Division (Integer vs Float)',
+    code: `integer int1\ninteger int2\ninteger answer1\nfloat float1\nfloat float2\nfloat answer2\n\nint1 = Get next input\nint2 = Get next input\nfloat1 = Get next input\nfloat2 = Get next input\n\nPut "Integer Division\\n" to output\nanswer1 = int1 / int2\nPut answer1 to output\nPut "\\n" to output\n\n// Integer Division assigned to a float\nanswer2 = int1 / int2\nPut answer2 to output\n\nPut "\\n\\nFloating-Point Division\\n" to output\n\n// Float Division assigned to an integer\nanswer1 = int1 / float2\nPut answer1 to output\nPut "\\n" to output\n\n// Float Division assigned to an integer\nanswer1 = float1 / float2\nPut answer1 to output\nPut "\\n" to output\n\n// Float Division assigned to a float\nanswer2 = float1 / float2\nPut answer2 to output\nPut "\\n" to output\n\n// Float Division assigned to a float\nanswer2 = int1 / float2\nPut answer2 to output`,
+    inputs: '7 2 7.0 2.0'
   }
 };
 

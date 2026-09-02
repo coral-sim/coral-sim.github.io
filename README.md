@@ -156,6 +156,7 @@ The **Load sample…** dropdown loads pre-written examples into the editor and p
 | For Loop | Counter-controlled `for` loop |
 | Array Example | Fixed-size array, fill and print |
 | Function Example (F→C) | User-defined function, float parameters, return value |
+| Division (Integer vs Float) | Integer vs float division; how result type changes when assigned to `integer` vs `float` |
 
 ---
 
