@@ -2707,10 +2707,11 @@ function fitFlowchart() {
   updateFcTransform();
 }
 
+// Scroll wheel pans vertically — no zoom on scroll (use + / - buttons to zoom)
 fcViewport.addEventListener('wheel', e => {
   e.preventDefault();
-  const delta = e.deltaY < 0 ? 1.1 : 0.9;
-  fcScale = Math.min(3, Math.max(0.2, fcScale * delta));
+  fcTx -= e.deltaX;
+  fcTy -= e.deltaY;
   updateFcTransform();
 }, { passive: false });
 
@@ -2718,6 +2719,7 @@ fcViewport.addEventListener('pointerdown', e => {
   fcPanActive = true; fcViewport.setPointerCapture(e.pointerId);
   fcPanStartX = e.clientX; fcPanStartY = e.clientY;
   fcPanStartTx = fcTx; fcPanStartTy = fcTy;
+  fcViewport.style.cursor = 'grabbing';
 });
 fcViewport.addEventListener('pointermove', e => {
   if (!fcPanActive) return;
@@ -2725,8 +2727,8 @@ fcViewport.addEventListener('pointermove', e => {
   fcTy = fcPanStartTy + (e.clientY - fcPanStartY);
   updateFcTransform();
 });
-fcViewport.addEventListener('pointerup',   () => { fcPanActive = false; });
-fcViewport.addEventListener('pointerleave', () => { fcPanActive = false; });
+fcViewport.addEventListener('pointerup',   () => { fcPanActive = false; fcViewport.style.cursor = ''; });
+fcViewport.addEventListener('pointerleave', () => { fcPanActive = false; fcViewport.style.cursor = ''; });
 
 btnFit.addEventListener('click', fitFlowchart);
 btnZoomIn.addEventListener('click',  () => { fcScale = Math.min(3, fcScale * 1.2); updateFcTransform(); });

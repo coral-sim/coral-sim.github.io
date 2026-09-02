@@ -128,7 +128,7 @@
     <!-- Flowchart panel -->
     <section id="panel-flowchart" role="tabpanel" aria-labelledby="tab-flowchart" hidden>
       <div id="flowchart-placeholder">Press Execute to generate the flowchart.</div>
-      <div id="flowchart-viewport" aria-label="Flowchart view. Use scroll wheel to zoom, drag to pan.">
+      <div id="flowchart-viewport" aria-label="Flowchart view. Drag or scroll to pan. Use + and - buttons to zoom.">
         <svg id="flowchart-svg" role="img" aria-label="Program flowchart">
           <g id="chart-root"></g>
         </svg>
@@ -228,8 +228,8 @@
         <h3>The Flowchart</h3>
         <p>Available for programs without user-defined functions. Switch to the <strong>Flowchart</strong> tab after pressing Execute. During stepping, the active node is highlighted in sync with the editor.</p>
         <ul>
-          <li><strong>Scroll wheel</strong> or pinch &mdash; zoom in/out</li>
-          <li><strong>Drag</strong> &mdash; pan around</li>
+          <li><strong>Drag</strong> or <strong>scroll wheel</strong> &mdash; pan around</li>
+          <li><strong>+</strong> / <strong>&minus;</strong> buttons &mdash; zoom in/out</li>
           <li><strong>Fit</strong> button &mdash; reset zoom to fit everything on screen</li>
           <li><strong>Keyboard (when flowchart is focused):</strong> <kbd>+</kbd> zoom in, <kbd>-</kbd> zoom out, <kbd>0</kbd> fit, <kbd>Arrow keys</kbd> pan</li>
         </ul>
@@ -258,6 +258,6 @@
     </div>
   </dialog>
 
-  <script src="coral.js?v=26"></script>
+  <script src="coral.js?v=27"></script>
 </body>
 </html>

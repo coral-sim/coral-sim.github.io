@@ -96,8 +96,8 @@ For programs with user-defined functions, the panel shows separate sections for 
 
 After pressing Execute on a program **without** user-defined functions, switch to the **Flowchart** tab to see a visual flowchart of the program's structure.
 
-- **Scroll wheel** or pinch — zoom in/out
-- **Drag** — pan around the diagram
+- **Drag** or **scroll wheel** — pan around the diagram
+- **+** / **−** buttons — zoom in/out
 - **Fit** button — resets zoom to fit the entire chart on screen
 - **+** / **−** buttons — manual zoom steps
 - **Keyboard (when flowchart is focused):** `+` zoom in, `-` zoom out, `0` fit, Arrow keys pan
