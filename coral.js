@@ -1838,7 +1838,11 @@ function renderFlowchartSVG(graph, activeNodeId) {
   if (visibleNodes.length === 0) return '<svg></svg>';
 
   const pad = 60;
-  const rightBound = Math.max(...visibleNodes.map(n => n.x + n.w));
+  // Parallelograms shear rightward: their visible right edge is n.x + n.w + PARA_SHEAR.
+  // Use that true visual bound so the right-rail routing clears all shapes.
+  const rightBound = Math.max(...visibleNodes.map(n =>
+    n.x + n.w + (n.shape === 'para' ? FC.PARA_SHEAR : 0)
+  ));
   const maxX = rightBound + pad + 40;  // extra space for right-rail routing
   const maxY = Math.max(...visibleNodes.map(n => n.y + n.h)) + pad;
 
@@ -1899,7 +1903,7 @@ function renderFlowchartSVG(graph, activeNodeId) {
       // Branch column → spine (converging exits): exit from right-center of the branch node,
       // route via right rail, then drop straight down so arrowhead points into the target's top
       const [rfx, rfy] = connPt(from, 'right');
-      const rightRailX = rightBound + 20;
+      const rightRailX = rightBound + 28;
       d = `M${rfx},${rfy} L${rightRailX},${rfy} L${rightRailX},${ty-20} L${tx},${ty-20} L${tx},${ty}`;
     } else {
       // Spine → branch column (e.g. else body edge): go down on spine then right to branch
