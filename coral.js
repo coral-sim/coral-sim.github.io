@@ -855,7 +855,7 @@ function formatValue(val, declaredType, decimals) {
 
 class Interpreter {
   constructor() {
-    this._rngState = 0;
+    this._rngState = Date.now() >>> 0;  // auto-seed so each run differs without SeedRandomNumbers
     this.functions = new Map();
   }
 
@@ -954,13 +954,28 @@ class Interpreter {
       'SquareRoot':        (args) => ({ val: Math.sqrt(args[0]),       isFloat: true }),
       'RaiseToPower':      (args) => ({ val: Math.pow(args[0], args[1]), isFloat: true }),
       'AbsoluteValue':     (args) => ({ val: Math.abs(args[0]),         isFloat: true }),
-      'RandomNumber':      ()     => ({ val: this.rng(),                isFloat: true }),
-      'SeedRandomNumbers': (args) => { this.seedRng(args[0]); return { val: null, isFloat: false }; },
+      'RandomNumber':      (args, nd) => {
+        if (args.length !== 2) throw RuntimeError(
+          `RandomNumber requires 2 arguments`, nd.line,
+          `Line ${nd.line}: RandomNumber(lower, upper) requires a lower and upper bound. Example: RandomNumber(1, 10)`);
+        const lo = Math.trunc(args[0]), hi = Math.trunc(args[1]);
+        if (lo > hi) throw RuntimeError(
+          `RandomNumber lower bound exceeds upper bound`, nd.line,
+          `Line ${nd.line}: RandomNumber lower bound (${lo}) must be less than or equal to upper bound (${hi}).`);
+        return { val: Math.floor(this.rng() * (hi - lo + 1)) + lo, isFloat: false };
+      },
+      'SeedRandomNumbers': (args, nd) => {
+        if (args.length !== 1) throw RuntimeError(
+          `SeedRandomNumbers requires 1 argument`, nd.line,
+          `Line ${nd.line}: SeedRandomNumbers(seed) requires exactly one integer seed value.`);
+        this.seedRng(args[0]);
+        return { val: null, isFloat: false };
+      },
     };
 
     if (BUILTINS[node.name]) {
       const argVals = node.args.map(a => this.eval(a, scope));
-      return BUILTINS[node.name](argVals);
+      return BUILTINS[node.name](argVals, node);
     }
 
     // User-defined functions — sync evaluation for use in expressions
