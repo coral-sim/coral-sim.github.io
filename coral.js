@@ -1570,16 +1570,66 @@ function buildFlowchartGraph(ast) {
 }
 
 // Place a node at current ls.cx, ls.y — advances ls.y
-function _placeNode(ls, id, shape, label, w, h, line) {
+// Compute dynamic node height based on how many lines the label wraps to.
+// Ovals are always fixed (they only ever say "Start" or "End").
+// Rects and paras: height = max(NODE_H, lines × lineH + top+bottom padding).
+// Diamonds: text must sit in the central ~50% of the height to clear the
+//   pointed corners, so height = max(DIAMOND_H, lines × lineH × 2 + padding).
+function _computeNodeH(shape, label) {
+  if (shape === 'oval') return FC.OVAL_H;
+  const lines  = wrapText(label, FC.CHARS_PER_LINE).length;
+  const lineH  = FC.FONT_SIZE * 1.45;
+  if (shape === 'diamond') {
+    return Math.max(FC.DIAMOND_H, Math.ceil(lines * lineH * 2 + FC.FONT_SIZE));
+  }
+  // rect or para
+  return Math.max(FC.NODE_H, Math.ceil(lines * lineH + FC.FONT_SIZE * 1.8));
+}
+
+// Look ahead at the first statement in a body block and return what height its
+// first flowchart node will have.  Used to center the TRUE branch's first node
+// on the diamond's midpoint so the horizontal TRUE arrow stays straight.
+function _firstBodyH(stmts) {
+  if (!stmts || stmts.length === 0) return FC.NODE_H;
+  const s = stmts[0];
+  const shapeFor = { Input:'para', ArrayInput:'para', SizeInput:'para', Put:'para' };
+  const labelFor = {
+    VarDecl:    (s) => s.dataType + ' ' + s.name,
+    ArrayDecl:  (s) => `${s.dataType} array(${s.size !== null ? s.size : '?'}) ${s.name}`,
+    Assign:     (s) => `${s.name} = ${exprText(s.value)}`,
+    ArrayAssign:(s) => `${s.name}[${exprText(s.index)}] = ${exprText(s.value)}`,
+    SizeAssign: (s) => `${s.name}.size = ${exprText(s.value)}`,
+    Input:      (s) => `${s.name} = Get next input`,
+    ArrayInput: (s) => `${s.name}[${exprText(s.index)}] = Get next input`,
+    SizeInput:  (s) => `${s.name}.size = Get next input`,
+    Put:        (s) => `Put ${exprText(s.expr)}${s.decimals !== null ? ` with ${s.decimals} decimal places` : ''} to output`,
+    ExprStmt:   (s) => exprText(s.expr),
+  };
+  if (labelFor[s.type]) {
+    return _computeNodeH(shapeFor[s.type] || 'rect', labelFor[s.type](s));
+  }
+  if (s.type === 'While') return _computeNodeH('diamond', exprText(s.condition));
+  if (s.type === 'If')    return _computeNodeH('diamond', exprText(s.branches[0].cond));
+  return FC.NODE_H; // For init-rect, default height
+}
+
+function _placeNode(ls, id, shape, label, w, _hHint, line) {
+  const h = _computeNodeH(shape, label);
   const n = { id, shape, label, w, h, x: ls.cx - w / 2, y: ls.y, line };
   ls.nodes.push(n);
   if (line !== null && line !== undefined) ls.lineToNodeId.set(line, id);
-  ls.y += h + FC.VERT_GAP;
+  // Diamonds get extra vertical gap so the FALSE label (below the bottom vertex)
+  // never overlaps the next node.
+  const gap = shape === 'diamond'
+    ? FC.VERT_GAP + Math.round(FC.FONT_SIZE * 1.5)
+    : FC.VERT_GAP;
+  ls.y += h + gap;
   return n;
 }
 
 // Place a node at an explicit cx (branch column) without touching ls.y
-function _placeNodeAt(ls, id, shape, label, w, h, cx, y, line) {
+function _placeNodeAt(ls, id, shape, label, w, _hHint, cx, y, line) {
+  const h = _computeNodeH(shape, label);
   const n = { id, shape, label, w, h, x: cx - w / 2, y, line };
   ls.nodes.push(n);
   if (line !== null && line !== undefined) ls.lineToNodeId.set(line, id);
@@ -1638,7 +1688,7 @@ function _placeStmt(stmt, prevIds, ls) {
     const branchCx = mainCx + FC.BRANCH_OFFSET;
     const savedCx = ls.cx, savedY = ls.y;
     ls.cx = branchCx;
-    ls.y  = condTopY + FC.DIAMOND_H / 2 - FC.NODE_H / 2;
+    ls.y  = condTopY + condNode.h / 2 - _firstBodyH(stmt.body) / 2;
 
     const bodyExits = _placeBlock(stmt.body, [condId], ls);
     const bodyBottomY = ls.y;
@@ -1677,7 +1727,7 @@ function _placeStmt(stmt, prevIds, ls) {
     const branchCx = mainCx + FC.BRANCH_OFFSET;
     const savedCx = ls.cx, savedY = ls.y;
     ls.cx = branchCx;
-    ls.y  = condTopY + FC.DIAMOND_H / 2 - FC.NODE_H / 2;
+    ls.y  = condTopY + condNode.h / 2 - _firstBodyH(stmt.body) / 2;
 
     const bodyExits = _placeBlock(stmt.body, [condId], ls);
 
@@ -1688,7 +1738,7 @@ function _placeStmt(stmt, prevIds, ls) {
       FC.NODE_W, FC.NODE_H, branchCx, ls.y, null);
     ls.forUpdateMap.set(stmt.line, updId);
     for (const eid of bodyExits) ls.edges.push({ from: eid, to: updId, fromSide:'bottom', toSide:'top' });
-    const branchBottomY = ls.y + FC.NODE_H + FC.VERT_GAP;
+    const branchBottomY = ls.y + updN.h + FC.VERT_GAP;
 
     ls.cx = savedCx;
     ls.y  = Math.max(afterCondY, branchBottomY);
@@ -1728,7 +1778,7 @@ function _placeStmt(stmt, prevIds, ls) {
       const branchCx = mainCx + FC.BRANCH_OFFSET;
       const savedCx = ls.cx, savedY = ls.y;
       ls.cx = branchCx;
-      ls.y  = condTopY + FC.DIAMOND_H / 2 - FC.NODE_H / 2;
+      ls.y  = condTopY + condNode.h / 2 - _firstBodyH(branch.body) / 2;
 
       const trueExits = _placeBlock(branch.body, [condId], ls);
       const branchBottomY = ls.y;
@@ -1831,9 +1881,17 @@ function renderFlowchartSVG(graph, activeNodeId) {
       const routingY = Math.max(fy + 10, aty + 30); // safely below diamond's bottom corner
       d = `M${fx},${fy} L${fx},${routingY} L${atx},${routingY} L${atx},${aty}`;
     } else if (fromSide === 'yes' || fromSide === 'right') {
-      // TRUE branch: from diamond right point, horizontal to left side of first body node
-      // (fy === ty when first body node is properly aligned with diamond mid-Y)
-      d = `M${fx},${fy} L${tx},${fy} L${tx},${ty}`;
+      // TRUE branch: from diamond right point to left-center of first body node.
+      // Always end horizontally so the arrowhead points left into the node.
+      if (Math.abs(fy - ty) < 1) {
+        // Body node center exactly aligned: straight horizontal line
+        d = `M${fx},${fy} L${tx},${ty}`;
+      } else {
+        // Body node center is at a different Y (node is taller/shorter than standard height).
+        // Z-route: out from diamond → midpoint jog → horizontal into node left-center.
+        const midX = Math.round(fx + (tx - fx) / 2);
+        d = `M${fx},${fy} L${midX},${fy} L${midX},${ty} L${tx},${ty}`;
+      }
     } else if (Math.abs(fx - tx) < 4) {
       // Same column: straight vertical line
       d = `M${fx},${fy} L${tx},${ty}`;
@@ -1856,8 +1914,12 @@ function renderFlowchartSVG(graph, activeNodeId) {
         // Label just above the horizontal segment, right of the diamond right point
         svgParts.push(`<text class="fc-edge-label" x="${fx+6}" y="${fy-4}">TRUE</text>`);
       } else if (fromSide === 'bottom' || fromSide === 'no') {
-        // Label just below-left of the diamond's bottom vertex, adjacent to the downward arrow
-        svgParts.push(`<text class="fc-edge-label" x="${fx - 44}" y="${fy + 14}">FALSE</text>`);
+        // Label just below the diamond's bottom vertex, offset left to clear the downward arrow.
+        // x is scaled so "FALSE" text clears the center arrow at all font sizes.
+        // y is scaled so the label sits in the gap between diamond and next node.
+        const flx = Math.round(FC.FONT_SIZE * 3.8);
+        const fly = Math.round(FC.FONT_SIZE * 1.2);
+        svgParts.push(`<text class="fc-edge-label" x="${fx - flx}" y="${fy + fly}">FALSE</text>`);
       }
     }
   }
