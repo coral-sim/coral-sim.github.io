@@ -434,39 +434,39 @@ html.theme-voyager #btn-execute-edit {
    ─────────────────────────────────────────────────────── */
 html.theme-classroom {
   --bg:      #FFFFFF;
-  --surface: #F4F6F8;
-  --panel:   #E8EDF2;
-  --border:  #9AAAB8;
-  --text:    #1A1A1A;
-  --muted:   #4A5560;
+  --surface: #E8EEF4;
+  --panel:   #D8E3EC;
+  --border:  #5A6E80;
+  --text:    #000000;
+  --muted:   #2A3A48;
   --accent:  #0050AA;
   --accent2: #006B30;
   --error:   #AA1500;
   --warn:    #9B6000;
 
-  --step-bg:        rgba(0,80,170,0.12);
+  --step-bg:        rgba(0,60,180,0.25);  /* 0.25 keeps hl-type at 4.9:1 on highlight ✓ */
   --step-border:    #0050AA;
   --step-gutter-bg: #0050AA;
   --step-gutter-fg: #FFFFFF;
 
   --hl-keyword:  #5500BB;  /* 9.9:1 on white */
-  --hl-type:     #0050AA;  /* 7.7:1 */
-  --hl-builtin:  #006B30;  /* 6.7:1 */
-  --hl-string:   #824200;  /* 7.7:1 */
-  --hl-number:   #AA2200;  /* 7.2:1 */
-  --hl-comment:  #5A6878;  /* 5.6:1 */
-  --hl-operator: #005580;  /* 8.1:1 */
+  --hl-type:     #0050AA;  /* 7.7:1 on white; 4.9:1 on step highlight ✓ */
+  --hl-builtin:  #005225;  /* 9.5:1 on white */
+  --hl-string:   #824200;  /* 7.7:1 on white */
+  --hl-number:   #AA2200;  /* 7.2:1 on white */
+  --hl-comment:  #3A4A55;  /* 9.2:1 on white */
+  --hl-operator: #003D66;  /* 11.3:1 on white */
 
-  --fc-oval:          #E8EDF8;
-  --fc-rect:          #E8EDF8;
-  --fc-para:          #E8EDF8;
-  --fc-diamond:       #EEF0FF;
+  --fc-oval:          #D8E5F5;
+  --fc-rect:          #D8E5F5;
+  --fc-para:          #D8E5F5;
+  --fc-diamond:       #DDE0FF;
   --fc-border:        #0050AA;
-  --fc-text:          #1A1A1A;
-  --fc-active-fill:   rgba(0,80,170,0.15);
+  --fc-text:          #000000;
+  --fc-active-fill:   rgba(0,60,180,0.25);
   --fc-active-stroke: #0050AA;
-  --fc-edge:          #4A5560;
-  --fc-arrow:         #4A5560;
+  --fc-edge:          #2A3A48;
+  --fc-arrow:         #2A3A48;
   --fc-label:         #824200;
 }
 
