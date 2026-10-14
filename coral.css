@@ -697,7 +697,7 @@ html.size-projector .fc-edge-label { font-size: 21px; }
   color: var(--text);
 }
 
-.out-line { white-space: pre-wrap; }
+.out-line { white-space: pre-wrap; min-height: 1.6em; }
 
 .out-warn {
   color: var(--warn);

@@ -2351,6 +2351,13 @@ function appendOutputFragment(text) {
   const OUTPUT_LINE_LIMIT = 10000;
   for (const ch of text) {
     if (ch === '\n') {
+      // If currentOutputLine is already null, this is a consecutive newline
+      // (blank line). Emit an empty div so the blank line renders visibly.
+      if (currentOutputLine === null) {
+        const blank = document.createElement('div');
+        blank.className = 'out-line';
+        outputEl.appendChild(blank);
+      }
       currentOutputLine = null;
       outputLineCount++;
       if (outputLineCount >= OUTPUT_LINE_LIMIT) {
