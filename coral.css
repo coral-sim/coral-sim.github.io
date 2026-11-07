@@ -40,6 +40,9 @@
   outline-offset: 2px;
 }
 
+/* Skip-link target receives programmatic focus only; no ring needed */
+#workspace:focus { outline: none; }
+
 /* ── Page layout ── */
 html, body {
   height: 100%;
@@ -56,6 +59,21 @@ html.size-xl        { font-size: 21px; }
 html.size-projector { font-size: 26px; }
 html.size-xl        header { height: auto; min-height: 52px; }
 html.size-projector header { height: auto; min-height: 64px; }
+
+/* At XL/Projector the header controls leave the status bar too little room and the
+   state word ("Complete") was clipped — give the status bar its own row (WCAG 1.4.4) */
+@media (min-width: 769px) {
+  html.size-xl header,
+  html.size-projector header {
+    grid-template-columns: auto 1fr;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  html.size-xl .header-controls,
+  html.size-projector .header-controls { justify-self: end; }
+  html.size-xl #status-bar,
+  html.size-projector #status-bar { grid-column: 1 / -1; grid-row: 2; }
+}
 
 /* Widen vars panel at larger sizes — desktop/tablet only, never on mobile */
 @media (min-width: 769px) {
@@ -205,6 +223,7 @@ header h1 {
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
+  flex-shrink: 0; /* never clip the state word; detail/step text truncate first */
 }
 
 #status-detail {
@@ -247,7 +266,9 @@ header h1 {
   font-size: 0.85rem;
   background: var(--bg);
   color: var(--text);
-  border: 1px solid var(--border);
+  /* --muted, not --border: the outline is the only cue that this is a text field,
+     so it needs 3:1 against the background in every theme (WCAG 1.4.11) */
+  border: 1px solid var(--muted);
   border-radius: var(--radius);
   padding: 4px 8px;
   resize: vertical;
@@ -754,7 +775,7 @@ button:disabled {
   color: var(--bg);
 }
 
-#btn-run-pause[aria-pressed="true"] {
+#btn-run-pause.is-running {
   background: color-mix(in srgb, var(--warn) 20%, var(--surface));
   border-color: var(--warn);
   color: var(--warn);
@@ -861,6 +882,19 @@ textarea:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* The code editor's textarea is transparent and must keep outline:none, so the
+   focus ring is drawn on its wrapper instead (inset, since parents clip overflow) */
+#editor-wrap:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+/* Focusable flowchart viewport (WCAG 2.4.7) */
+#flowchart-viewport:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
 }
 
 /* ── Syntax highlight span classes ── */
@@ -1064,6 +1098,25 @@ a:focus-visible {
   }
 
   input[type="range"] { width: 70px; }
+}
+
+/* Short desktop windows — e.g. a 1080p screen at 200% zoom (960×540 CSS px) or the
+   larger text sizes. The fixed 100vh layout squeezed the output panel to nothing,
+   so let the page scroll and give each region a usable height (WCAG 1.4.4 / 1.4.10). */
+@media (min-width: 769px) and (max-height: 640px) {
+  html, body {
+    height: auto;
+    overflow-y: auto;
+  }
+  body { min-height: 100vh; }
+  #workspace {
+    flex: none;
+    height: max(300px, 60vh);
+  }
+  html:root #output-area { /* :root outranks the html.size-* min-height rules */
+    max-height: none;
+    min-height: 180px;
+  }
 }
 
 @media (max-width: 480px) {

@@ -2055,7 +2055,8 @@ const helpModal      = document.getElementById('help-modal');
 const btnHelpClose   = document.getElementById('btn-help-close');
 const btnClearOutput  = document.getElementById('btn-clear-output');
 const errorAnnounce   = document.getElementById('error-announce');
-const urlBanner       = document.getElementById('url-banner');
+const stepAnnounce    = document.getElementById('step-announce');
+const urlBanner      = document.getElementById('url-banner');
 const btnUrlClose     = document.getElementById('btn-url-banner-close');
 const panelCode      = document.getElementById('panel-code');
 const panelFlowchart = document.getElementById('panel-flowchart');
@@ -2089,6 +2090,17 @@ let prevVarSnapshot = new Map(); // for flash detection
 let fcScale = 1, fcTx = 0, fcTy = 0;
 let fcPanActive = false, fcPanStartX = 0, fcPanStartY = 0, fcPanStartTx = 0, fcPanStartTy = 0;
 let activeTab = 'code';
+let announceTimer = null;
+
+// ── Screen-reader announcements ──
+// Polite announcement (WCAG 4.1.3). Clear first so identical consecutive
+// messages (e.g. two steps on the same line) are re-announced.
+// setTimeout (not rAF) so it still fires when the tab isn't being painted.
+function announce(text) {
+  clearTimeout(announceTimer);
+  stepAnnounce.textContent = '';
+  announceTimer = setTimeout(() => { stepAnnounce.textContent = text; }, 50);
+}
 
 // ── State machine ──
 function setState(newState) {
@@ -2106,8 +2118,10 @@ function setState(newState) {
   btnStep.disabled = !(isReady || isPaused);
   btnRestart.disabled = isEdit;
   btnRunPause.disabled = isEdit || isComplete;
+  // Label change alone conveys the state; no aria-pressed (it made screen readers
+  // say "Pause execution, toggle button, pressed") (WCAG 4.1.2)
   btnRunPause.textContent = isRunning ? 'Pause' : 'Run';
-  btnRunPause.setAttribute('aria-pressed', isRunning ? 'true' : 'false');
+  btnRunPause.classList.toggle('is-running', isRunning);
   btnRunPause.setAttribute('aria-label', isRunning ? 'Pause execution' : 'Run program');
   btnInstant.disabled = !(isReady || isPaused);
 
@@ -2271,7 +2285,7 @@ function applyStep(yieldValue) {
   } else {
     clearActiveLineHighlight();
   }
-  renderVarsTable(callStack);
+  const varChanges = renderVarsTable(callStack) || [];
   stepIndex++;
   statusStep.textContent = `Step ${stepIndex}`;
 
@@ -2279,13 +2293,44 @@ function applyStep(yieldValue) {
   if (callStack && callStack.length > 1) {
     const frame = callStack[callStack.length - 1];
     if (loc && loc.part === 'returning') {
-      statusDetail.textContent = `returning from ${escHtml(frame.label)}`;
+      statusDetail.textContent = `returning from ${frame.label}`;
     } else {
-      statusDetail.textContent = `in ${escHtml(frame.label)}`;
+      statusDetail.textContent = `in ${frame.label}`;
     }
   } else {
     statusDetail.textContent = '';
   }
+
+  announce(describeStep(loc, varChanges));
+}
+
+// Builds the screen-reader text for one step, e.g.
+// "Step 7. i is now 1. Line 3, checking loop condition: for i = 0; i < 5; i = i + 1."
+// Variable changes come first: they are the result of the previous line, while the
+// highlighted line is the one about to run (same as the visual display).
+const STEP_PART_TEXT = {
+  forInit:   'loop setup',
+  forCond:   'checking loop condition',
+  forUpdate: 'loop update',
+  returning: 'returning',
+};
+function describeStep(loc, varChanges) {
+  let msg = `Step ${stepIndex}.`;
+  const MAX_CHANGES = 4;
+  if (varChanges.length) {
+    msg += ' ' + varChanges.slice(0, MAX_CHANGES).join('. ') + '.';
+    if (varChanges.length > MAX_CHANGES) {
+      msg += ` And ${varChanges.length - MAX_CHANGES} more changes in the Variables panel.`;
+    }
+  }
+  if (statusDetail.textContent) msg += ` Now ${statusDetail.textContent}.`;
+  if (loc && loc.line) {
+    msg += ` Line ${loc.line}`;
+    if (STEP_PART_TEXT[loc.part]) msg += `, ${STEP_PART_TEXT[loc.part]}`;
+    const code = (editor.value.split('\n')[loc.line - 1] || '').trim();
+    msg += code ? `: ${code}` : '.';
+  }
+  return msg;
 }
 
 function finishExecution() {
@@ -2399,17 +2444,21 @@ function showError(e) {
 
   const text = (line ? `Line ${line}: ` : '') + msg + (hint ? '\n' + hint : '');
 
-  // Visible error in output log
+  // Visible error in output log. The log's live announcement is switched off for
+  // this one insertion so the error is spoken once (by #error-announce below), not
+  // twice; the text stays in the log for students to review later.
   const div = document.createElement('div');
   div.className = 'out-error';
   div.textContent = text;
+  outputEl.setAttribute('aria-live', 'off');
   outputEl.appendChild(div);
   outputEl.scrollTop = outputEl.scrollHeight;
+  setTimeout(() => outputEl.setAttribute('aria-live', 'polite'), 100);
 
   // Assertive screen-reader announcement (WCAG 4.1.3) — clears then sets so
   // repeated errors are always re-announced even if the text is identical.
   errorAnnounce.textContent = '';
-  requestAnimationFrame(() => { errorAnnounce.textContent = 'Error: ' + text; });
+  setTimeout(() => { errorAnnounce.textContent = 'Error: ' + text; }, 50); // not rAF: must fire even when the tab isn't painting
 }
 
 // ── Editor: active line highlight ──
@@ -2549,9 +2598,31 @@ editor.addEventListener('scroll', () => {
 
 // Tab key inserts 3 spaces
 editor.addEventListener('keydown', e => {
+  // While executing, the editor is read-only: let Tab / Shift+Tab move focus normally
+  if (e.key === 'Tab' && editor.readOnly) return;
+  if (e.key === 'Tab' && e.shiftKey) {
+    // Shift+Tab outdents: removes up to 3 leading spaces from each selected line
+    e.preventDefault();
+    const val = editor.value;
+    const selStart = editor.selectionStart, selEnd = editor.selectionEnd;
+    const lineStart = val.lastIndexOf('\n', selStart - 1) + 1;
+    const lines = val.slice(lineStart, selEnd).split('\n');
+    let removedFirst = 0, removedTotal = 0;
+    const outdented = lines.map((ln, i) => {
+      const n = ln.match(/^ {0,3}/)[0].length;
+      if (i === 0) removedFirst = n;
+      removedTotal += n;
+      return ln.slice(n);
+    }).join('\n');
+    editor.value = val.slice(0, lineStart) + outdented + val.slice(selEnd);
+    editor.selectionStart = Math.max(lineStart, selStart - removedFirst);
+    editor.selectionEnd   = Math.max(editor.selectionStart, selEnd - removedTotal);
+    updateEditorUI();
+    scheduleAutoSave();
+    return;
+  }
   if (e.key === 'Tab') {
     e.preventDefault();
-    if (e.shiftKey) return; // ignore shift-tab for now
     const start = editor.selectionStart;
     const end   = editor.selectionEnd;
     const val   = editor.value;
@@ -2611,6 +2682,38 @@ function renderVarsTable(callStack) {
       newSnapshot.set(r.name, r.key);
     }
   }
+
+  // Plain-language list of what changed since the last step, for screen readers.
+  // Skipped when the frame changed (function call/return) — the step text says that.
+  const changes = [];
+  const sameFrame = prevVarSnapshot.size > 0 &&
+    allRowData.some(r => prevVarSnapshot.has(r.name) || prevVarSnapshot.has(r.name + '[0]'));
+  for (const r of allRowData) {
+    const val = r.entry.value;
+    if (val instanceof CoralArray) {
+      const wasSized = prevVarSnapshot.has(r.name + '[0]');
+      const existed  = wasSized || prevVarSnapshot.has(r.name);
+      if (!existed) {
+        if (sameFrame || prevVarSnapshot.size === 0) changes.push(`${r.name} declared`);
+      } else if (val._sizeSet && !wasSized) {
+        changes.push(`${r.name} now has ${val.data.length} elements`);
+      } else if (val._sizeSet) {
+        val.data.forEach((v, i) => {
+          const prev = prevVarSnapshot.get(r.name + '[' + i + ']');
+          if (prev === undefined) changes.push(`${r.name}[${i}] added, value ${v}`);
+          else if (prev !== String(v)) changes.push(`${r.name}[${i}] is now ${v}`);
+        });
+      }
+    } else {
+      const prevKey = prevVarSnapshot.get(r.name);
+      if (prevKey === undefined) {
+        if (sameFrame || prevVarSnapshot.size === 0) changes.push(`${r.name} declared, value ${scalarDisplay(r)}`);
+      } else if (prevKey !== r.key) {
+        changes.push(`${r.name} is now ${scalarDisplay(r)}`);
+      }
+    }
+  }
+
   prevVarSnapshot = newSnapshot;
 
   function buildSectionTable(label, sectionKey, rows) {
@@ -2656,9 +2759,7 @@ function renderVarsTable(callStack) {
       // No flash on the outer row — individual index rows flash instead.
     } else {
       const cls = type === 'float' ? 'var-float' : 'var-int';
-      const dispVal = type === 'float'
-        ? formatValue(val, 'float', null)
-        : String(Math.trunc(Number(val)));
+      const dispVal = scalarDisplay(row);
       tr.innerHTML = `<td class="var-name">${escHtml(name)}</td><td class="var-type">${escHtml(typeDisplay)}</td><td class="${cls}">${escHtml(dispVal)}</td>`;
 
       // Flash scalar row if value changed
@@ -2670,6 +2771,16 @@ function renderVarsTable(callStack) {
     }
     return tr;
   }
+
+  return changes;
+}
+
+// Value text shown in the Variables panel (and spoken) for a scalar variable
+function scalarDisplay(row) {
+  const val = row.entry.value;
+  return row.type === 'float'
+    ? formatValue(val, 'float', null)
+    : String(Math.trunc(Number(val)));
 }
 
 function buildArraySubTable(arr, name) {
@@ -2750,11 +2861,28 @@ function renderFlowchart(activeNodeId) {
   // Update accessible description with node/edge count (WCAG 1.1.1 / 4.1.2)
   const nodeCount = flowchartGraph.nodes ? flowchartGraph.nodes.length : 0;
   const edgeCount = flowchartGraph.edges ? flowchartGraph.edges.length : 0;
+  const activeNode = activeNodeId != null
+    ? (flowchartGraph.nodes || []).find(n => n.id === activeNodeId) : null;
   flowchartSvg.setAttribute('aria-label',
     `Program flowchart: ${nodeCount} node${nodeCount !== 1 ? 's' : ''}, ` +
-    `${edgeCount} connection${edgeCount !== 1 ? 's' : ''}.`);
+    `${edgeCount} connection${edgeCount !== 1 ? 's' : ''}.` +
+    (activeNode ? ` Current: ${describeFcNode(activeNode)}.` : ''));
+
+  // Text alternative (WCAG 1.1.1): every node in reading order. The Code tab
+  // holds the same program as plain text.
+  const outline = (flowchartGraph.nodes || []).map((n, i) =>
+    `${i + 1}. ${describeFcNode(n)}` + (n.line ? ` (line ${n.line})` : ''));
+  document.getElementById('flowchart-desc').textContent =
+    'Flowchart steps: ' + outline.join('; ') +
+    '. The Code tab contains the same program as text.';
 
   updateFcTransform();
+}
+
+const FC_SHAPE_TEXT = { oval: 'Terminal', rect: 'Process', para: 'Input or output', diamond: 'Decision' };
+function describeFcNode(n) {
+  const kind = FC_SHAPE_TEXT[n.shape] || 'Step';
+  return n.label ? `${kind}: ${String(n.label).replace(/\n/g, ' ')}` : kind;
 }
 
 function syncFlowchartHighlight(lineNum, part) {
@@ -2822,7 +2950,7 @@ btnZoomOut.addEventListener('click', () => { fcScale = Math.max(0.2, fcScale / 1
 // + / = → zoom in;  - → zoom out;  0 → fit;  Arrow keys → pan 40px
 fcViewport.setAttribute('tabindex', '0');
 fcViewport.setAttribute('aria-label',
-  'Flowchart view. Scroll to zoom, drag to pan. Keyboard: + zoom in, - zoom out, 0 fit, arrow keys pan.');
+  'Flowchart view. Scroll or drag to pan. Keyboard: + zoom in, - zoom out, 0 fit, arrow keys pan.');
 fcViewport.addEventListener('keydown', e => {
   if (!flowchartGraph) return;
   const PAN = 40;
@@ -2945,11 +3073,22 @@ sampleSelect.addEventListener('change', () => {
   const key = sampleSelect.value;
   if (!key || !SAMPLES[key]) return;
   const s = SAMPLES[key];
+  // Protect the student's own work (WCAG 3.2.2): only replace without asking when
+  // the editor is empty or still holds an unedited sample.
+  const current = editor.value.trim();
+  const isUnchangedSample = Object.values(SAMPLES).some(x => x.code.trim() === current);
+  if (current && !isUnchangedSample &&
+      !confirm(`Replace the code in the editor with the "${s.label}" sample? Your current code will be lost.`)) {
+    sampleSelect.value = '';
+    return;
+  }
   editor.value = s.code;
   inputTextarea.value = s.inputs;
   sampleSelect.value = '';
   updateEditorUI();
-  editor.focus();
+  scheduleAutoSave();
+  // Focus stays on the menu (no unexpected focus jump); confirm the load instead.
+  announce(`${s.label} sample loaded into the code editor.`);
 });
 
 // ── URL banner ──

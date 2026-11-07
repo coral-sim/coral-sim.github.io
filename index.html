@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="themes.css?v=12">
-  <link rel="stylesheet" href="coral.css?v=40">
+  <link rel="stylesheet" href="themes.css?v=13">
+  <link rel="stylesheet" href="coral.css?v=44">
 </head>
 <body>
 
@@ -20,9 +20,13 @@
   <!-- Assertive live region for errors — announced immediately by screen readers (WCAG 4.1.3) -->
   <div id="error-announce" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
+  <!-- Polite live region: announces the current line and variable changes after each step,
+       and confirmations such as "sample loaded" (WCAG 1.3.1 / 4.1.3) -->
+  <div id="step-announce" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
   <!-- Screen-reader description for the code editor keyboard trap -->
   <p id="editor-keyboard-hint" class="sr-only">
-    Press Tab to indent (3 spaces). Press Escape then Tab to leave the editor with the keyboard.
+    Press Tab to indent (3 spaces) and Shift+Tab to outdent. Press Escape then Tab to leave the editor with the keyboard.
   </p>
 
   <!-- URL param load banner (hidden until URL params detected) -->
@@ -34,11 +38,13 @@
   <!-- Title bar -->
   <header>
     <h1>Coral Sim</h1>
-    <div id="status-bar" role="status" aria-live="polite" aria-atomic="false" class="state-edit">
+    <!-- Only the state label is live; step/line details are announced via #step-announce
+         so screen readers hear each step once (WCAG 4.1.3) -->
+    <div id="status-bar" class="state-edit">
       <span id="status-indicator" aria-hidden="true">&#x25CF;</span>
-      <span id="status-state">Edit Mode</span>
-      <span id="status-detail" aria-live="polite"></span>
-      <span id="status-step" aria-live="polite"></span>
+      <span id="status-state" role="status" aria-live="polite">Edit Mode</span>
+      <span id="status-detail"></span>
+      <span id="status-step"></span>
     </div>
     <div class="header-controls">
       <select id="sample-select" aria-label="Load sample program">
@@ -70,19 +76,21 @@
         <option value="projector">Projector</option>
       </select>
       <button id="btn-help" aria-label="Open help" title="Help">?</button>
-      <a id="btn-bug" href="https://github.com/coral-sim/coral-sim.github.io/issues" target="_blank" rel="noopener noreferrer" aria-label="Report a bug on GitHub" title="Report a bug">&#x26A0;&#xFE0E;</a>
+      <a id="btn-bug" href="https://github.com/coral-sim/coral-sim.github.io/issues" target="_blank" rel="noopener noreferrer" aria-label="Report a bug on GitHub (opens in new tab)" title="Report a bug (opens in new tab)">&#x26A0;&#xFE0E;</a>
     </div>
   </header>
 
   <!-- Toolbar -->
-  <div id="toolbar" role="toolbar" aria-label="Execution controls">
+  <!-- role="group", not "toolbar": each button is its own Tab stop, and the toolbar
+       role tells screen-reader users to expect arrow-key navigation instead -->
+  <div id="toolbar" role="group" aria-label="Execution controls">
     <button id="btn-execute-edit" aria-label="Execute program">Execute</button>
     <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
     <button id="btn-step" disabled aria-label="Step forward">Step &#9654;</button>
     <button id="btn-restart" disabled aria-label="Restart execution from beginning">&#x21BA; Restart</button>
-    <button id="btn-run-pause" disabled aria-label="Run program" aria-pressed="false">Run</button>
+    <button id="btn-run-pause" disabled aria-label="Run program">Run</button>
     <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
-    <button id="btn-instant" disabled aria-label="Run to completion instantly">Instant &#9197;</button>
+    <button id="btn-instant" disabled aria-label="Instant: run to completion">Instant &#9197;</button>
     <div class="toolbar-sep" role="separator" aria-hidden="true"></div>
     <div class="speed-group">
       <label for="speed-slider" class="speed-label">Speed</label>
@@ -105,7 +113,7 @@
   </div>
 
   <!-- Main workspace -->
-  <main id="workspace">
+  <main id="workspace" tabindex="-1">
 
     <!-- Code panel -->
     <section id="panel-code" role="tabpanel" aria-labelledby="tab-code">
@@ -129,8 +137,9 @@
     <!-- Flowchart panel -->
     <section id="panel-flowchart" role="tabpanel" aria-labelledby="tab-flowchart" hidden>
       <div id="flowchart-placeholder">Press Execute to generate the flowchart.</div>
-      <div id="flowchart-viewport" aria-label="Flowchart view. Drag or scroll to pan. Use + and - buttons to zoom.">
-        <svg id="flowchart-svg" role="img" aria-label="Program flowchart">
+      <div id="flowchart-viewport" role="group" aria-roledescription="flowchart viewer" aria-label="Flowchart view. Drag or scroll to pan. Use + and - buttons to zoom.">
+        <svg id="flowchart-svg" role="img" aria-label="Program flowchart" aria-describedby="flowchart-desc">
+          <desc id="flowchart-desc"></desc>
           <g id="chart-root"></g>
         </svg>
       </div>
@@ -197,14 +206,14 @@
           <dd>Runs the program automatically at the selected speed. Press again to pause.</dd>
           <dt>Speed slider</dt>
           <dd>Controls how fast <em>Run</em> advances. Leftmost = slowest (3 s/step). Rightmost = fastest (0.75 s/step).</dd>
-          <dt>Instant &#9193;</dt>
+          <dt>Instant &#9197;</dt>
           <dd>Runs the entire program to completion immediately, showing the final output and variable values.</dd>
         </dl>
       </section>
 
       <section class="help-section">
         <h3>Status Bar</h3>
-        <p>The colored dot and state label below the toolbar show what the simulator is doing:</p>
+        <p>The colored dot and state label next to the <strong>Coral Sim</strong> title show what the simulator is doing:</p>
         <ul>
           <li><strong>Edit Mode</strong> &mdash; you can modify code and inputs</li>
           <li><strong>Ready</strong> &mdash; compiled successfully; press Step or Run</li>
@@ -217,7 +226,8 @@
 
       <section class="help-section">
         <h3>Keyboard Navigation in the Editor</h3>
-        <p>Inside the editor, <strong>Tab</strong> inserts three spaces (Coral requires 3-space indentation). To move focus out of the editor using only the keyboard, press <strong>Escape</strong> first, then Tab to advance to the next control.</p>
+        <p>Inside the editor, <strong>Tab</strong> inserts three spaces (Coral requires 3-space indentation) and <strong>Shift+Tab</strong> removes them. To move focus out of the editor using only the keyboard, press <strong>Escape</strong> first, then Tab to advance to the next control. While a program is executing, the editor is read-only and Tab moves focus normally.</p>
+        <p>With a screen reader, each step announces the variables that just changed, then the line that will run next.</p>
       </section>
 
       <section class="help-section">
@@ -250,8 +260,8 @@
         <h3>Language Reference</h3>
         <p>The Coral language was created by Frank Vahid, Roman Lysecky, and Alex Edgcomb.</p>
         <ul>
-          <li><a href="https://corallanguage.org/spec/" target="_blank" rel="noopener noreferrer">Coral Language Reference &#8599;</a> &mdash; official specification</li>
-          <li><a href="https://corallanguage.org/about/" target="_blank" rel="noopener noreferrer">About Coral &#8599;</a> &mdash; language background and design goals</li>
+          <li><a href="https://corallanguage.org/spec/" target="_blank" rel="noopener noreferrer">Coral Language Reference <span aria-hidden="true">&#8599;</span><span class="sr-only"> (opens in new tab)</span></a> &mdash; official specification</li>
+          <li><a href="https://corallanguage.org/about/" target="_blank" rel="noopener noreferrer">About Coral <span aria-hidden="true">&#8599;</span><span class="sr-only"> (opens in new tab)</span></a> &mdash; language background and design goals</li>
         </ul>
         <p>This simulator is an independent educational tool and is not affiliated with or endorsed by zyBooks.</p>
       </section>
@@ -259,6 +269,6 @@
     </div>
   </dialog>
 
-  <script src="coral.js?v=35"></script>
+  <script src="coral.js?v=40"></script>
 </body>
 </html>

@@ -407,8 +407,8 @@ html.theme-voyager {
   --fc-text:          #C0D4F0;
   --fc-active-fill:   rgba(0,200,192,0.20);
   --fc-active-stroke: #00C8C0;
-  --fc-edge:          #3A5888;
-  --fc-arrow:         #3A5888;
+  --fc-edge:          #5070A4;
+  --fc-arrow:         #5070A4;
   --fc-label:         #FF9900;
 }
 
@@ -442,7 +442,7 @@ html.theme-classroom {
   --accent:  #0050AA;
   --accent2: #006B30;
   --error:   #AA1500;
-  --warn:    #9B6000;
+  --warn:    #8A5500;
 
   --step-bg:        rgba(0,60,180,0.25);  /* 0.25 keeps hl-type at 4.9:1 on highlight ✓ */
   --step-border:    #0050AA;
