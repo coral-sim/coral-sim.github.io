@@ -50,7 +50,8 @@ html.theme-dark {
   --fc-diamond:       #2a1f4a;
   --fc-border:        #79b8ff;
   --fc-text:          #e2e8f0;
-  --fc-active-fill:   rgba(250,255,110,0.22);
+  --fc-active-fill:   #faff6e;
+  --fc-active-text:   #0f1117;
   --fc-active-stroke: #e6e800;
   --fc-edge:          #9aaac8;
   --fc-arrow:         #9aaac8;
@@ -92,11 +93,12 @@ html.theme-light {
   --fc-diamond:       #ede9fe;
   --fc-border:        #1d4ed8;
   --fc-text:          #1e293b;
-  --fc-active-fill:   rgba(255,243,176,0.8);
-  --fc-active-stroke: #c2410c; /* darkened — WCAG 1.4.11 */
+  --fc-active-fill:   #fbbf24;
+  --fc-active-text:   #1e293b;
+  --fc-active-stroke: #c2410c;
   --fc-edge:          #4b5563;
   --fc-arrow:         #4b5563;
-  --fc-label:         #7A4500; /* darkened from #b45309 — WCAG 1.4.3 */
+  --fc-label:         #7A4500;
 }
 
 
@@ -136,7 +138,8 @@ html.theme-rhc-dark {
   --fc-diamond:       #251A00;   /* dark gold tint */
   --fc-border:        #F9C900;
   --fc-text:          #F5F0E0;
-  --fc-active-fill:   rgba(249,201,0,0.22);
+  --fc-active-fill:   #F9C900;
+  --fc-active-text:   #0A0800;
   --fc-active-stroke: #F9C900;
   --fc-edge:          #A0A898;
   --fc-arrow:         #A0A898;
@@ -186,7 +189,8 @@ html.theme-dyslexic-light {
   --fc-diamond:       #EDE8FF;
   --fc-border:        #1A5FAA;
   --fc-text:          #333328;
-  --fc-active-fill:   rgba(255,220,0,0.55);
+  --fc-active-fill:   #FFD700;
+  --fc-active-text:   #1A1A10;
   --fc-active-stroke: #A03000;
   --fc-edge:          #666658;
   --fc-arrow:         #666658;
@@ -231,7 +235,8 @@ html.theme-dyslexic-dark {
   --fc-diamond:       #221A28;
   --fc-border:        #6AACE8;
   --fc-text:          #F0EDD8;
-  --fc-active-fill:   rgba(232,192,64,0.22);
+  --fc-active-fill:   #E8C040;
+  --fc-active-text:   #1A1800;
   --fc-active-stroke: #E8C040;
   --fc-edge:          #B0AA88;
   --fc-arrow:         #B0AA88;
@@ -298,7 +303,8 @@ html.theme-hc {
   --fc-diamond:       #0A0A0A;
   --fc-border:        #FFFFFF;
   --fc-text:          #FFFFFF;
-  --fc-active-fill:   rgba(255,255,0,0.30);
+  --fc-active-fill:   #FFFF00;
+  --fc-active-text:   #000000;
   --fc-active-stroke: #FFFF00;
   --fc-edge:          #DDDDDD;
   --fc-arrow:         #DDDDDD;
@@ -350,7 +356,8 @@ html.theme-synthwave {
   --fc-diamond:       #2A0830;
   --fc-border:        #FF5FA0;
   --fc-text:          #E8D8FF;
-  --fc-active-fill:   rgba(0,229,200,0.18);
+  --fc-active-fill:   #00E5C8;
+  --fc-active-text:   #050210;
   --fc-active-stroke: #00E5C8;
   --fc-edge:          #9878C8;
   --fc-arrow:         #9878C8;
@@ -405,7 +412,8 @@ html.theme-voyager {
   --fc-diamond:       #0C0820;
   --fc-border:        #4488DD;
   --fc-text:          #C0D4F0;
-  --fc-active-fill:   rgba(0,200,192,0.20);
+  --fc-active-fill:   #00C8C0;
+  --fc-active-text:   #000C0C;
   --fc-active-stroke: #00C8C0;
   --fc-edge:          #5070A4;
   --fc-arrow:         #5070A4;
@@ -463,7 +471,8 @@ html.theme-classroom {
   --fc-diamond:       #DDE0FF;
   --fc-border:        #0050AA;
   --fc-text:          #000000;
-  --fc-active-fill:   rgba(0,60,180,0.25);
+  --fc-active-fill:   #0050AA;
+  --fc-active-text:   #FFFFFF;
   --fc-active-stroke: #0050AA;
   --fc-edge:          #2A3A48;
   --fc-arrow:         #2A3A48;

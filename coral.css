@@ -524,10 +524,18 @@ header h1 {
 
 /* Flowchart SVG styles */
 .fc-node { cursor: default; }
+/* Running node: solid fill + its own text color (same colors as the code view's
+   line-number highlight) and a 3.5px outline. The old translucent tint was only
+   1.1–2.1:1 against neighbouring nodes; this is ≥6:1 in dark themes and Classroom,
+   and relies on the ≥4.9:1 outline in the two light themes (WCAG 1.4.11 / 1.4.1). */
 .fc-active .fc-shape {
   fill: var(--fc-active-fill) !important;
   stroke: var(--fc-active-stroke) !important;
-  stroke-width: 2.5px !important;
+  stroke-width: 3.5px !important;
+}
+.fc-active .fc-node-text {
+  fill: var(--fc-active-text);
+  font-weight: 700;
 }
 .fc-node-text { font-family: var(--mono); font-size: 12px; fill: var(--fc-text); font-variant-ligatures: none; }
 .fc-edge { stroke: var(--fc-edge); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
