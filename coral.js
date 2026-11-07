@@ -2420,6 +2420,7 @@ function showError(e) {
 // can differ subtly between browsers and cause the highlight to drift over many lines.
 
 let _lineMeasureDiv = null;
+let _activeLineContentTop = null; // raw offset from content top (pre-scroll)
 
 function ensureLineMeasureDiv() {
   if (_lineMeasureDiv) return;
@@ -2495,8 +2496,9 @@ function highlightEditorLine(lineNum) {
   const top        = getVisualLineTop(lineNum, paddingTop, cs);
   const hlHeight   = getActiveLineHeight(lineNum, cs);
 
+  _activeLineContentTop = top;
   activeLineDiv.style.display = 'block';
-  activeLineDiv.style.top    = top + 'px';
+  activeLineDiv.style.top    = (top - editor.scrollTop) + 'px';
   activeLineDiv.style.height = hlHeight + 'px';
 
   // Gutter highlight (no-op on mobile where the gutter is hidden)
@@ -2513,6 +2515,7 @@ function highlightEditorLine(lineNum) {
 }
 
 function clearActiveLineHighlight() {
+  _activeLineContentTop = null;
   activeLineDiv.style.display = 'none';
   document.querySelectorAll('.gutter-line.active').forEach(el => el.classList.remove('active'));
 }
@@ -2525,6 +2528,7 @@ function updateEditorUI() {
   // Gutter
   gutter.innerHTML = lines.map((_, i) =>
     `<span class="gutter-line">${i + 1}</span>`).join('');
+  gutter.scrollTop = editor.scrollTop;
 
   // Highlight overlay
   overlay.innerHTML = highlightSource(src);
@@ -2538,7 +2542,9 @@ editor.addEventListener('scroll', () => {
   overlay.scrollTop  = editor.scrollTop;
   overlay.scrollLeft = editor.scrollLeft;
   gutter.scrollTop   = editor.scrollTop;
-  // Reposition active line div relative to scroll
+  if (_activeLineContentTop !== null) {
+    activeLineDiv.style.top = (_activeLineContentTop - editor.scrollTop) + 'px';
+  }
 });
 
 // Tab key inserts 3 spaces
