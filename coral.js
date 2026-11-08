@@ -1598,6 +1598,9 @@ function buildFlowchartGraph(ast) {
   // Remove placeholder
   ls.edges = ls.edges.filter(e => e.from !== '__entry__');
 
+  // Widen shapes to fit their text and re-space the columns so arrows stay visible
+  _fitColumns(ls.nodes);
+
   return {
     nodes: ls.nodes,
     edges: ls.edges,
@@ -1866,6 +1869,82 @@ function _placeStmt(stmt, prevIds, ls) {
   return prevIds;
 }
 
+// ── Fitting shapes to their text ──
+// Node text is monospaced (JetBrains Mono / Courier New), so every character is
+// 0.6em wide; a little extra covers bold active-node text and font fallback.
+const FC_CHAR_W = 0.62;
+
+function _textBlock(n) {
+  const lines = wrapText(n.label, FC.CHARS_PER_LINE);
+  return {
+    w: Math.max(...lines.map(l => l.length)) * FC.FONT_SIZE * FC_CHAR_W,
+    h: lines.length * FC.FONT_SIZE * 1.45,
+  };
+}
+
+// Narrowest width at which this node's text stays inside the shape's edges
+function _requiredWidth(n) {
+  const { w: tw, h: th } = _textBlock(n);
+  const pad = FC.FONT_SIZE * 0.6;
+  if (n.shape === 'rect') return tw + 2 * pad;
+  // Parallelogram: the slant takes away (shear × text height / shape height) of width
+  if (n.shape === 'para') return tw + 2 * pad + FC.PARA_SHEAR * th / n.h;
+  // Diamond: usable width shrinks toward the top and bottom points
+  if (n.shape === 'diamond') return (tw + 2 * pad) / Math.max(0.25, 1 - th / n.h);
+  return 0; // ovals only ever say Start / End
+}
+
+// Gives every shape in a column the same width (wide enough for the longest label
+// in that column), then re-spaces the columns. Columns are spaced by their real
+// widths plus a gap that always fits an arrowhead and the TRUE label, so widening
+// one column can never push a shape over another column's arrows.
+function _fitColumns(nodes) {
+  const SPINE_CX = 200;
+  const colOf = n => Math.round((n.x + n.w / 2 - SPINE_CX) / FC.BRANCH_OFFSET);
+
+  // 1. Width per column, kept separately for boxes (rect + para) and diamonds
+  const cols = new Map();
+  for (const n of nodes) {
+    if (n.shape === 'merge') continue;
+    const k = colOf(n);
+    if (!cols.has(k)) cols.set(k, { box: FC.NODE_W, diamond: FC.DIAMOND_W, oval: 0, hasPara: false });
+    const c = cols.get(k);
+    const req = Math.ceil(_requiredWidth(n));
+    if (n.shape === 'rect' || n.shape === 'para') c.box = Math.max(c.box, req);
+    if (n.shape === 'para') c.hasPara = true;
+    if (n.shape === 'diamond') c.diamond = Math.max(c.diamond, req);
+    if (n.shape === 'oval') c.oval = Math.max(c.oval, n.w);
+  }
+
+  // 2. Column centres. The gap between neighbouring columns is at least the
+  // original design gap, and always room for "TRUE" plus the arrowhead.
+  const labelFont = FC.FONT_SIZE - 1; // .fc-edge-label is 1px smaller than node text
+  const labelGap  = Math.ceil(4 * labelFont * 0.7) + 30; // "TRUE" + margins + arrowhead
+  const baseGap   = FC.BRANCH_OFFSET - FC.DIAMOND_W / 2 - FC.NODE_W / 2;
+  const gap = Math.max(baseGap, labelGap);
+  const keys = [...cols.keys()].sort((a, b) => a - b);
+  const centre = new Map();
+  let prevRight = null;
+  for (const k of keys) {
+    const c = cols.get(k);
+    const leftHalf  = Math.max(c.box, c.diamond, c.oval) / 2;
+    const rightHalf = Math.max(c.box / 2 + (c.hasPara ? FC.PARA_SHEAR : 0), c.diamond / 2, c.oval / 2);
+    const cx = prevRight === null ? Math.max(SPINE_CX, leftHalf + 40) : prevRight + gap + leftHalf;
+    centre.set(k, cx);
+    prevRight = cx + rightHalf;
+  }
+
+  // 3. Apply widths and positions
+  for (const n of nodes) {
+    if (n.shape === 'merge') continue;
+    const k = colOf(n);
+    const c = cols.get(k);
+    if (n.shape === 'rect' || n.shape === 'para') n.w = c.box;
+    if (n.shape === 'diamond') n.w = c.diamond;
+    n.x = centre.get(k) - n.w / 2;
+  }
+}
+
 function _markFirstForwardEdgeSides(edges, fromId, fromSide, toSide) {
   const e = edges.find(e => e.from === fromId && !e.isBack);
   if (e) { e.fromSide = fromSide; if (toSide !== undefined) e.toSide = toSide; }
@@ -1898,10 +1977,13 @@ function renderFlowchartSVG(graph, activeNodeId) {
   // Helper: get connection point on a node
   function connPt(n, side) {
     const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+    // Parallelogram sides slant: at mid-height they sit half a shear further right
+    // than the box edges, so arrows meet the drawn edge instead of starting inside it
+    const sideShift = n.shape === 'para' ? FC.PARA_SHEAR / 2 : 0;
     if (side === 'top')              return [cx, n.y];
     if (side === 'bottom')           return [cx, n.y + n.h];
-    if (side === 'left')             return [n.x, cy];
-    if (side === 'right' || side === 'yes') return [n.x + n.w, cy];
+    if (side === 'left')             return [n.x + sideShift, cy];
+    if (side === 'right' || side === 'yes') return [n.x + n.w + sideShift, cy];
     return [cx, n.y + n.h]; // default bottom
   }
 
@@ -1994,25 +2076,76 @@ function renderFlowchartSVG(graph, activeNodeId) {
     const lineHeight = FC.FONT_SIZE * 1.45;
     const totalH = lines.length * lineHeight;
     const textY = cy - totalH / 2 + FC.FONT_SIZE * 0.85;
+    // A parallelogram is drawn sheared right, so its visual centre is half a shear
+    // to the right of the box centre — centre the text there so it clears both slants
+    const textX = n.shape === 'para' ? cx + FC.PARA_SHEAR / 2 : cx;
     const tspans = lines.map((l, i) =>
-      `<tspan x="${cx}" dy="${i === 0 ? 0 : lineHeight}">${escHtml(l)}</tspan>`).join('');
+      `<tspan x="${textX}" dy="${i === 0 ? 0 : lineHeight}">${escHtml(l)}</tspan>`).join('');
 
-    svgParts.push(`<g class="${cls}" id="${n.id}">${shape}<text class="fc-node-text" x="${cx}" y="${textY}" text-anchor="middle">${tspans}</text></g>`);
+    svgParts.push(`<g class="${cls}" id="${n.id}">${shape}<text class="fc-node-text" x="${textX}" y="${textY}" text-anchor="middle">${tspans}</text></g>`);
   }
 
   svgParts.push('</svg>');
   return svgParts.join('');
 }
 
+// Splits a flowchart label into units that must never be broken across lines:
+//  - string literals            "Integer Division\n"
+//  - names with [] or () groups scores[i], arr[j + 1], RaiseToPower(i, 2)
+//  - fixed Coral phrases        Get next input, to output, with 2 decimal places
+// Everything else splits at spaces (operators and plain names).
+function labelUnits(text) {
+  const words = [];
+  let cur = '', depth = 0, inStr = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      cur += ch;
+      if (ch === '\\' && i + 1 < text.length) { cur += text[++i]; continue; }
+      if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; cur += ch; continue; }
+    if (ch === '[' || ch === '(') depth++;
+    if (ch === ']' || ch === ')') depth = Math.max(0, depth - 1);
+    if (ch === ' ' && depth === 0) { if (cur) words.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  if (cur) words.push(cur);
+
+  // Merge fixed phrases into single units
+  const units = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (w === 'Get' && words[i + 1] === 'next' && words[i + 2] === 'input') {
+      units.push('Get next input'); i += 2;
+    } else if (w === 'to' && words[i + 1] === 'output') {
+      units.push('to output'); i += 1;
+    } else if (w === 'with' && words[i + 2] === 'decimal' && words[i + 3] === 'places') {
+      units.push(`with ${words[i + 1]} decimal places`); i += 3;
+    } else {
+      units.push(w);
+    }
+  }
+  return units;
+}
+
+// Wraps a flowchart label at about charsPerLine characters, breaking only between
+// whole units (see labelUnits). A unit longer than the limit gets a line to itself
+// and the shape widens to fit it — code is never split or cut off.
 function wrapText(text, charsPerLine) {
   if (!text) return [''];
   if (text.length <= charsPerLine) return [text];
-  const words = text.split(' ');
+  const units = labelUnits(text);
+  // Keep "Put" with what it outputs, so it is never left alone on a line
+  if (units[0] === 'Put' && units.length > 1) {
+    units.splice(0, 2, `Put ${units[1]}`);
+  }
   const lines = [];
   let cur = '';
-  for (const w of words) {
-    if (cur && (cur + ' ' + w).length > charsPerLine) { lines.push(cur); cur = w; }
-    else { cur = cur ? cur + ' ' + w : w; }
+  for (const u of units) {
+    if (cur && (cur + ' ' + u).length > charsPerLine) { lines.push(cur); cur = u; }
+    else { cur = cur ? cur + ' ' + u : u; }
   }
   if (cur) lines.push(cur);
   return lines;
