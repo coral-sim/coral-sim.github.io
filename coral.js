@@ -77,6 +77,20 @@ function lex(src) {
     // Indent
     let col = 0;
     while (col < raw.length && raw[col] === ' ') col++;
+    // Indentation must be exactly 3 spaces per level. Anything else used to make the
+    // parser silently stop at this line and ignore the rest of the program.
+    if (raw[col] === '\t') {
+      throw LexError(
+        `Indentation uses a tab character. Coral uses exactly 3 spaces per level; replace the tab with spaces.`,
+        lineNum
+      );
+    }
+    if (col % 3 !== 0) {
+      throw LexError(
+        `Indentation must be in steps of 3 spaces (found ${col}). Coral uses exactly 3 spaces per level.`,
+        lineNum
+      );
+    }
     if (col > 0) {
       tokens.push({ type: TK.INDENT, value: col, line: lineNum });
     }
@@ -305,7 +319,7 @@ class Parser {
       throw ParseError(`Expected return type after 'returns'`, this.getLine());
     }
     this.eat(TK.NEWLINE, `Expected newline after function signature`);
-    const body = this.parseBlock(3);
+    const body = this.parseBody(3, line, `Function '${name}'`);
     return { type:'FunctionDef', name, params, returnVar, returnType, returnIsArray, returnArraySize, body, line };
   }
 
@@ -351,7 +365,17 @@ class Parser {
       // Check indent level
       const indentLevel = this.currentIndentLevel();
       if (indentLevel < 0) break; // NEWLINE/EOF = done
-      if (indentLevel !== expectedIndent) break;
+      if (indentLevel > expectedIndent) {
+        // Nested blocks consume their own deeper lines, so a deeper line here is
+        // never valid — previously it silently ended the program at this line.
+        const ln = this.getLine();
+        throw ParseError(
+          `This line is indented ${indentLevel} spaces, but it should be indented ${expectedIndent}.`,
+          ln,
+          `Only lines inside an if, elseif, else, while, for, or Function are indented further, by 3 spaces per level.`
+        );
+      }
+      if (indentLevel !== expectedIndent) break; // shallower: this block has ended
 
       // Consume indent token if present
       if (this.check(TK.INDENT)) this.advance();
@@ -373,6 +397,20 @@ class Parser {
 
       stmts.push(stmt);
       this.skipNewlines();
+    }
+    return stmts;
+  }
+
+  // Like parseBlock, but the block must contain at least one statement. An empty
+  // body (the next line not indented) used to run silently with nothing in it.
+  parseBody(expectedIndent, headerLine, what) {
+    const stmts = this.parseBlock(expectedIndent);
+    if (stmts.length === 0) {
+      throw ParseError(
+        `The ${what} needs at least one line below it, indented ${expectedIndent} spaces.`,
+        headerLine,
+        `Indent the lines that belong to it by 3 more spaces than the ${what} line.`
+      );
     }
     return stmts;
   }
@@ -518,7 +556,7 @@ class Parser {
     const condLoc = { line };
     const condition = this.parseCondExpr();
     this.eat(TK.NEWLINE, `Expected newline after 'if' condition`);
-    const consequent = this.parseBlock(indentLevel + 3);
+    const consequent = this.parseBody(indentLevel + 3, line, "'if'");
     const elseifs = [];
     let alternate = null;
 
@@ -531,16 +569,17 @@ class Parser {
       const eiCondLoc = { line: eiLine };
       const cond = this.parseCondExpr();
       this.eat(TK.NEWLINE, `Expected newline after 'elseif' condition`);
-      const body = this.parseBlock(indentLevel + 3);
+      const body = this.parseBody(indentLevel + 3, eiLine, "'elseif'");
       elseifs.push({ condLoc: eiCondLoc, cond, body, line: eiLine });
       this.skipNewlines();
     }
 
     if (this._atTokenAtIndent(indentLevel, TK.ELSE)) {
       if (this.check(TK.INDENT)) this.advance();
+      const elseLine = this.getLine();
       this.eat(TK.ELSE);
       this.eat(TK.NEWLINE, `Expected newline after 'else'`);
-      alternate = this.parseBlock(indentLevel + 3);
+      alternate = this.parseBody(indentLevel + 3, elseLine, "'else'");
     }
 
     return { type:'If', condLoc, condition, consequent, elseifs, alternate, line };
@@ -574,7 +613,7 @@ class Parser {
     this.eat(TK.WHILE);
     const condition = this.parseCondExpr();
     this.eat(TK.NEWLINE, `Expected newline after 'while' condition`);
-    const body = this.parseBlock(indentLevel + 3);
+    const body = this.parseBody(indentLevel + 3, line, "'while' loop");
     return { type:'While', condLoc, condition, body, line };
   }
 
@@ -599,7 +638,7 @@ class Parser {
     const updateValue = this.parseCondExpr();
     const update = { type:'Assign', name: updateName, value: updateValue, line };
     this.eat(TK.NEWLINE, `Expected newline after for-loop header`);
-    const body = this.parseBlock(indentLevel + 3);
+    const body = this.parseBody(indentLevel + 3, line, "'for' loop");
     return { type:'For', initLoc, condLoc, updateLoc, init, condition, update, body, line };
   }
 
@@ -2199,6 +2238,8 @@ btnExecuteEdit.addEventListener('click', () => {
     tokens = lex(src);
     parsedAst = new Parser(tokens).parse();
   } catch(e) {
+    // Show only the current error — old errors from earlier attempts piled up here
+    clearOutput();
     setFlowchartUnavailable(e.line
       ? `Fix the error on line ${e.line} (shown in Output), then press Execute again.`
       : 'Fix the error shown in Output, then press Execute again.');
@@ -2561,7 +2602,8 @@ function keywordCaseHint(lineNum) {
 
 function showError(e) {
   const line  = e.line  || null;
-  const msg   = e.message || String(e);
+  // Some messages carry their own "Line N:" prefix — drop it so it isn't doubled
+  const msg   = (e.message || String(e)).replace(/^Line \d+:\s*/, '');
   const isSyntax = e.name === 'ParseError' || e.name === 'LexError';
   // Hints sometimes start with their own "Line N:" — drop it so the line number is
   // stated (and spoken) once
