@@ -218,6 +218,18 @@ header h1 {
 #status-bar.state-running  #status-indicator { color: var(--accent); }
 #status-bar.state-paused   #status-indicator { color: var(--warn); }
 #status-bar.state-complete #status-indicator { color: var(--accent2); }
+#status-bar.state-error    #status-indicator { color: var(--error); }
+#status-bar.state-error    #status-state     { color: var(--error); }
+
+/* Panel titles are h2 for heading navigation (WCAG 1.3.1) but keep their
+   compact look; the id rules below set size, color and spacing */
+.panel-heading {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
 
 #status-state {
   font-weight: 600;
@@ -899,8 +911,10 @@ a:focus-visible {
   outline-offset: -3px;
 }
 
-/* Focusable flowchart viewport (WCAG 2.4.7) */
-#flowchart-viewport:focus-visible {
+/* Focusable flowchart viewport and scrollable panels (WCAG 2.4.7) */
+#flowchart-viewport:focus-visible,
+#vars-panel:focus-visible,
+#output:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: -3px;
 }

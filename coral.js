@@ -550,12 +550,23 @@ class Parser {
     return { type:'Put', expr, decimals, line };
   }
 
+  // End of an if / elseif / while condition. A single '=' here is almost always
+  // a comparison written as an assignment, so say so (WCAG 3.3.3).
+  eatConditionEnd(keyword) {
+    const t = this.peek();
+    if (t.type === TK.ASSIGN) {
+      throw ParseError(`'=' can't be used in the '${keyword}' condition`, t.line,
+        `To compare two values, use == (two equals signs). A single = assigns a value.`);
+    }
+    this.eat(TK.NEWLINE, `Expected newline after '${keyword}' condition`);
+  }
+
   parseBranch(indentLevel) {
     const line = this.getLine();
     this.eat(TK.IF);
     const condLoc = { line };
     const condition = this.parseCondExpr();
-    this.eat(TK.NEWLINE, `Expected newline after 'if' condition`);
+    this.eatConditionEnd('if');
     const consequent = this.parseBody(indentLevel + 3, line, "'if'");
     const elseifs = [];
     let alternate = null;
@@ -568,7 +579,7 @@ class Parser {
       this.eat(TK.ELSEIF);
       const eiCondLoc = { line: eiLine };
       const cond = this.parseCondExpr();
-      this.eat(TK.NEWLINE, `Expected newline after 'elseif' condition`);
+      this.eatConditionEnd('elseif');
       const body = this.parseBody(indentLevel + 3, eiLine, "'elseif'");
       elseifs.push({ condLoc: eiCondLoc, cond, body, line: eiLine });
       this.skipNewlines();
@@ -612,7 +623,7 @@ class Parser {
     const condLoc = { line };
     this.eat(TK.WHILE);
     const condition = this.parseCondExpr();
-    this.eat(TK.NEWLINE, `Expected newline after 'while' condition`);
+    this.eatConditionEnd('while');
     const body = this.parseBody(indentLevel + 3, line, "'while' loop");
     return { type:'While', condLoc, condition, body, line };
   }
@@ -1320,9 +1331,13 @@ function* genCall(callNode, scope, ctx) {
     }
   }
 
-  const frame = { label: fn.name, scope: fnScope, kind: 'function',
+  const frame = { label: fn.name, scope: fnScope, kind: 'function', fn,
     paramNames: new Set(fn.params.map(p => p.name)), returnVar: fn.returnVar };
   ctx.callStack.push(frame);
+
+  // Stop on the function header first, so students see the parameters receive
+  // their values and the return variable start out before the body runs.
+  yield { loc: { line: fn.line, part: 'entering' }, scope: fnScope, callStack: ctx.callStack };
 
   yield* genBlock(fn.body, fnScope, ctx);
 
@@ -2245,7 +2260,9 @@ const btnZoomIn      = document.getElementById('btn-zoom-in');
 const btnZoomOut     = document.getElementById('btn-zoom-out');
 
 // State
-const STATE = { EDIT:'EDIT', READY:'READY', RUNNING:'RUNNING', PAUSED:'PAUSED', COMPLETE:'COMPLETE' };
+// ERROR: the program stopped on a runtime error (not "Complete", which would
+// tell students it ran successfully) (WCAG 3.3.1 / 4.1.3)
+const STATE = { EDIT:'EDIT', READY:'READY', RUNNING:'RUNNING', PAUSED:'PAUSED', COMPLETE:'COMPLETE', ERROR:'ERROR' };
 let state = STATE.EDIT;
 let currentGenerator = null;
 let genOutput = [];
@@ -2268,6 +2285,7 @@ let activeTab = 'code';
 let announceTimer = null;
 let logSilenceTimer = null;
 let pendingDecision = null; // decision line from the previous step, resolved true/false on the next step
+let stepDepth = 1;          // call-stack depth at the previous step ("Back in Main" when it drops)
 
 // ── Screen-reader announcements ──
 // Polite announcement (WCAG 4.1.3). Clear first so identical consecutive
@@ -2297,7 +2315,7 @@ function setState(newState) {
   const isRunning  = state === STATE.RUNNING;
   const isPaused   = state === STATE.PAUSED;
   const isReady    = state === STATE.READY;
-  const isComplete = state === STATE.COMPLETE;
+  const isComplete = state === STATE.COMPLETE || state === STATE.ERROR; // finished, either way
   const inExec     = !isEdit;
 
   btnExecuteEdit.textContent = isEdit ? 'Execute' : 'Edit';
@@ -2320,7 +2338,8 @@ function setState(newState) {
 
   // Status bar state class
   statusBar.className = 'state-' + state.toLowerCase();
-  const labels = { EDIT:'Edit Mode', READY:'Ready', RUNNING:'Running', PAUSED:'Paused', COMPLETE:'Complete' };
+  const labels = { EDIT:'Edit Mode', READY:'Ready', RUNNING:'Running', PAUSED:'Paused', COMPLETE:'Complete',
+                   ERROR:'Stopped: error' };
   statusState.textContent = labels[state] || state;
 
   if (isEdit) {
@@ -2341,16 +2360,34 @@ function setState(newState) {
   }
 }
 
+// Run speed: 9 slider positions on a log scale from 8 s per step (slow enough for
+// a screen reader to finish each step message) to 0.1 s (fast-forwarding in lecture)
+const SPEED_SLOWEST_MS = 8000;
+const SPEED_FASTEST_MS = 100;
+// At or above this step time, Run speaks the full step message; faster, it speaks
+// only output, errors and completion (full messages would pile up) (WCAG 4.1.3)
+const FULL_MESSAGE_MS = 6000;
+// Below this step time, changed values aren't flashed (keeps flashes under 3 per second, WCAG 2.3.1)
+const NO_FLASH_MS = 350;
+
 function currentSpeedMs() {
   const pos = Number(speedSlider.value);
-  return Math.round(3000 * Math.pow(750 / 3000, (pos - 1) / 8));
+  const min = Number(speedSlider.min), max = Number(speedSlider.max);
+  return Math.round(SPEED_SLOWEST_MS *
+    Math.pow(SPEED_FASTEST_MS / SPEED_SLOWEST_MS, (pos - min) / (max - min)));
+}
+
+// While running fast, step messages are skipped and variable flashes turned off
+function isFastRun() {
+  return state === STATE.RUNNING && currentSpeedMs() < FULL_MESSAGE_MS;
 }
 
 function updateSpeedAriaText() {
   const ms = currentSpeedMs();
-  const secs = (ms / 1000).toFixed(1);
+  const secs = Number((ms / 1000).toFixed(ms < 1000 ? 2 : 1));
+  const spoken = ms >= FULL_MESSAGE_MS ? 'reads every step' : 'reads output only until paused';
   speedSlider.setAttribute('aria-valuenow', speedSlider.value);
-  speedSlider.setAttribute('aria-valuetext', `Step every ${secs} seconds`);
+  speedSlider.setAttribute('aria-valuetext', `Step every ${secs} seconds, ${spoken}`);
 }
 
 // ── Execute / Edit ──
@@ -2477,11 +2514,38 @@ function advanceOneStep() {
     if (value) applyStep(value, produced);
     if (state !== STATE.RUNNING) setState(STATE.PAUSED);
   } catch(e) {
-    flushOutput();
-    showError(e);
-    setState(STATE.COMPLETE);
     if (runTimer) { clearInterval(runTimer); runTimer = null; }
+    takeRunOutput(); // the error is spoken instead; the output stays in the log
+    withLogSilenced(flushOutput);
+    showError(e);
+    setState(STATE.ERROR);
   }
+}
+
+// ── Fast-run speech ──
+// While Run is faster than FULL_MESSAGE_MS, only program output is spoken,
+// gathered up and read at most every 1.5 s so messages don't pile up.
+let runOutputBuffer = '';
+let runOutputTimer = null;
+let lastStepMessage = ''; // full message for the current step, spoken on Pause
+
+function queueRunOutput(text) {
+  runOutputBuffer += text;
+  if (!runOutputTimer) runOutputTimer = setTimeout(speakRunOutput, 1500);
+}
+
+function speakRunOutput() {
+  const text = takeRunOutput();
+  if (text) announce(`Output: ${describeOutput(text)}.`);
+}
+
+// Returns output not yet spoken and clears it
+function takeRunOutput() {
+  clearTimeout(runOutputTimer);
+  runOutputTimer = null;
+  const text = runOutputBuffer;
+  runOutputBuffer = '';
+  return text;
 }
 
 function applyStep(yieldValue, produced) {
@@ -2510,7 +2574,14 @@ function applyStep(yieldValue, produced) {
   }
 
   const depth = callStack ? callStack.length : 1;
-  announce(describeStep(loc, varChanges, produced, depth));
+  if (isFastRun()) {
+    // Output only; the step message is kept (without output, which is queued) for Pause
+    lastStepMessage = describeStep(loc, varChanges, '', callStack);
+    if (produced) queueRunOutput(produced);
+  } else {
+    lastStepMessage = describeStep(loc, varChanges, produced, callStack);
+    announce(lastStepMessage);
+  }
 }
 
 // Builds the screen-reader text for one step, e.g.
@@ -2569,15 +2640,84 @@ function resolveDecision(loc, depth) {
   return `${d.cond} is ${wentIn ? 'true' : 'false'}.`;
 }
 
-// Spoken form of program output: makes newlines and spaces audible
+// Spoken form of program output: makes newlines and spaces audible, including
+// spaces at the start or end, which screen readers otherwise skip
 function describeOutput(text) {
   if (/^\n+$/.test(text)) return text.length === 1 ? 'new line' : `${text.length} new lines`;
   if (/^ +$/.test(text))  return text.length === 1 ? 'a space' : `${text.length} spaces`;
-  return text.replace(/\n/g, ' (new line) ').replace(/\s+/g, ' ').trim();
+  const spaces = n => n === 1 ? 'a space' : `${n} spaces`;
+  const lead  = text.match(/^ */)[0].length;
+  const trail = text.match(/ *$/)[0].length;
+  const notes = [];
+  if (lead)  notes.push(`starts with ${spaces(lead)}`);
+  if (trail) notes.push(`ends with ${spaces(trail)}`);
+  const body = text.replace(/\n/g, ' (new line) ').replace(/\s+/g, ' ').trim();
+  return notes.length ? `${body} (${notes.join(', ')})` : body;
 }
 
-function describeStep(loc, varChanges, produced, depth) {
+// ── Function calls in step messages ──
+const article = type => /^[aeiou]/.test(type) ? 'an' : 'a';
+
+function spokenValue(val, type) {
+  return type === 'float' ? formatValue(val, 'float', null) : String(Math.trunc(Number(val)));
+}
+
+// Entering a function: explains each part of its header in plain words, e.g.
+// "Parameter n is an integer, set to 3. result is an integer that starts at 0.
+//  Its value is returned when Factorial ends."
+function describeFunctionEntry(frame) {
+  const fn = frame.fn;
+  const parts = fn.params.map(p => {
+    const val = frame.scope.get(p.name);
+    if (p.isArray) {
+      return val.size === 0
+        ? `Parameter ${p.name} is ${article(p.ptype)} ${p.ptype} array, empty`
+        : `Parameter ${p.name} is ${article(p.ptype)} ${p.ptype} array with ${val.size} element${val.size === 1 ? '' : 's'}`;
+    }
+    return `Parameter ${p.name} is ${article(p.ptype)} ${p.ptype}, set to ${spokenValue(val, p.ptype)}`;
+  });
+  if (!fn.params.length) parts.push(`${fn.name} has no parameters`);
+  if (!fn.returnVar) {
+    parts.push(`${fn.name} returns nothing`);
+  } else if (fn.returnIsArray) {
+    parts.push(`${fn.returnVar} is ${article(fn.returnType)} ${fn.returnType} array. ` +
+               `Its contents are returned when ${fn.name} ends`);
+  } else {
+    const start = spokenValue(frame.scope.get(fn.returnVar), fn.returnType);
+    parts.push(`${fn.returnVar} is ${article(fn.returnType)} ${fn.returnType} that starts at ${start}. ` +
+               `Its value is returned when ${fn.name} ends`);
+  }
+  return parts.join('. ') + '.';
+}
+
+// Leaving a function: only the value goes back to the caller, never the name of
+// the return variable, e.g. "Factorial returns 6 to Main."
+function describeFunctionReturn(frame, callerLabel) {
+  const fn = frame.fn;
+  if (!fn.returnVar) return `${fn.name} is complete. Nothing is returned to ${callerLabel}.`;
+  const rv = frame.scope.get(fn.returnVar);
+  if (fn.returnIsArray) {
+    return `${fn.name} returns ${article(fn.returnType)} ${fn.returnType} array with ` +
+           `${rv.size} element${rv.size === 1 ? '' : 's'} to ${callerLabel}.`;
+  }
+  return `${fn.name} returns ${spokenValue(rv, fn.returnType)} to ${callerLabel}.`;
+}
+
+function describeStep(loc, varChanges, produced, callStack) {
+  const depth = callStack ? callStack.length : 1;
+  const frame = callStack ? callStack[depth - 1] : null;
   let msg = `Step ${stepIndex}.`;
+
+  // Moved back out of a function (said once, not on every step)
+  if (depth < stepDepth && frame) msg += ` Back in ${frame.label}.`;
+  stepDepth = depth;
+
+  if (loc && loc.part === 'entering' && frame && frame.fn) {
+    msg += ` Entered ${frame.label}. Line ${loc.line}: ${srcLine(loc.line)}. ${describeFunctionEntry(frame)}`;
+    pendingDecision = pendingDecision && depth > pendingDecision.depth ? pendingDecision : null;
+    return msg;
+  }
+
   const outcome = resolveDecision(loc, depth);
   if (outcome) msg += ' ' + outcome;
   if (produced) msg += ` Output: ${describeOutput(produced)}.`;
@@ -2588,16 +2728,17 @@ function describeStep(loc, varChanges, produced, depth) {
       msg += ` And ${varChanges.length - MAX_CHANGES} more changes in the Variables panel.`;
     }
   }
-  if (statusDetail.textContent) msg += ` Now ${statusDetail.textContent}.`;
   if (loc && loc.line) {
     const code = srcLine(loc.line);
     const forParts = FOR_PART_TEXT[loc.part] && parseForHeader(code);
     if (forParts) {
       // Read only the part of the for header that is running (matches the flowchart node)
       msg += ` Line ${loc.line}, loop ${FOR_PART_TEXT[loc.part]}: ${forParts[loc.part]}`;
+    } else if (loc.part === 'returning' && frame && frame.fn) {
+      const caller = callStack[depth - 2];
+      msg += ` Line ${loc.line}. ${describeFunctionReturn(frame, caller ? caller.label : 'the caller')}`;
     } else {
       msg += ` Line ${loc.line}`;
-      if (loc.part === 'returning') msg += ', returning';
       msg += code ? `: ${code}` : '.';
     }
   } else {
@@ -2626,8 +2767,9 @@ function finishExecution(produced) {
   } else {
     withLogSilenced(() => outputEl.appendChild(done));
     const outcome = resolveDecision(null, 1);
+    const spoken = takeRunOutput() + produced; // output a fast Run hadn't spoken yet
     announce((outcome ? outcome + ' ' : '') +
-      (produced ? `Output: ${describeOutput(produced)}. ` : '') + 'Program complete.');
+      (spoken ? `Output: ${describeOutput(spoken)}. ` : '') + 'Program complete.');
   }
   outputEl.scrollTop = outputEl.scrollHeight;
 }
@@ -2635,8 +2777,14 @@ function finishExecution(produced) {
 // ── Run / Pause ──
 btnRunPause.addEventListener('click', () => {
   if (state === STATE.RUNNING) {
+    const wasFast = isFastRun();
     clearInterval(runTimer); runTimer = null;
     setState(STATE.PAUSED);
+    // A fast Run only spoke output, so say where it stopped
+    if (wasFast) {
+      const pending = takeRunOutput();
+      announce((pending ? `Output: ${describeOutput(pending)}. ` : '') + 'Paused. ' + lastStepMessage);
+    }
   } else {
     setState(STATE.RUNNING);
     runTimer = setInterval(advanceOneStep, currentSpeedMs());
@@ -2655,17 +2803,26 @@ speedSlider.addEventListener('input', () => {
 btnInstant.addEventListener('click', () => {
   if (!currentGenerator) return;
   if (runTimer) { clearInterval(runTimer); runTimer = null; }
+  takeRunOutput();
+  // The Variables panel is drawn once at the end, not on every step: redrawing it
+  // 100,000 times froze the page for seconds on long loops
+  let lastCallStack = null;
   try {
     while (true) {
       const { value, done } = currentGenerator.next();
-      flushOutput();
-      if (done) { finishExecution(); return; }
-      if (value && value.callStack) renderVarsTable(value.callStack);
+      if (genOutput.length) flushOutput();
+      if (value && value.callStack) lastCallStack = value.callStack;
+      if (done) {
+        if (lastCallStack) renderVarsTable(lastCallStack);
+        finishExecution();
+        return;
+      }
     }
   } catch(e) {
     flushOutput();
+    if (lastCallStack) renderVarsTable(lastCallStack);
     showError(e);
-    setState(STATE.COMPLETE);
+    setState(STATE.ERROR);
   }
 });
 
@@ -2747,6 +2904,9 @@ function showError(e) {
   if (line) {
     highlightEditorLine(line);
     if (flowchartGraph) syncFlowchartHighlight(line);
+    // Focus isn't moved (the student may be on a toolbar button), but the next
+    // time they go to the editor the cursor is on the error line
+    placeCursorOnLine(line);
   }
 
   const text = (line ? `Line ${line}: ` : '') + msg + (hint ? '\n' + hint : '');
@@ -2900,17 +3060,104 @@ editor.addEventListener('scroll', () => {
   }
 });
 
-// Tab key inserts 3 spaces
+// ── Cursor position for screen readers (WCAG 1.3.1) ──
+// Line numbers are only drawn in the (aria-hidden) gutter, but errors refer to
+// them, so keep "Line N, column C" in the editor's description and speak the
+// line number when the cursor moves to a different line.
+const editorPosition = document.getElementById('editor-position');
+const cursorAnnounce = document.getElementById('cursor-announce');
+let lastCursorLine = 1;
+let cursorAnnounceTimer = null;
+
+function caretLineCol() {
+  const before = editor.value.slice(0, editor.selectionStart);
+  const line = before.split('\n').length;
+  const col  = editor.selectionStart - (before.lastIndexOf('\n') + 1) + 1;
+  return { line, col };
+}
+
+function updateCursorPosition(speak) {
+  const { line, col } = caretLineCol();
+  editorPosition.textContent = `Line ${line}, column ${col}`;
+  if (speak && line !== lastCursorLine) {
+    // Wait until the cursor settles so holding an arrow key doesn't queue every line
+    clearTimeout(cursorAnnounceTimer);
+    cursorAnnounceTimer = setTimeout(() => {
+      cursorAnnounce.textContent = '';
+      setTimeout(() => { cursorAnnounce.textContent = `Line ${caretLineCol().line}`; }, 50);
+    }, 400);
+  }
+  lastCursorLine = line;
+}
+
+editor.addEventListener('keyup', e => {
+  if (/^(Arrow|Page|Home|End|Enter|Backspace|Delete)/.test(e.key)) updateCursorPosition(true);
+  else updateCursorPosition(false);
+});
+editor.addEventListener('mouseup', () => updateCursorPosition(true));
+editor.addEventListener('focus',   () => updateCursorPosition(false));
+
+// Puts the cursor at the start of a line's code (after its indentation), so a
+// student returning to the editor after an error lands on the line it names.
+function placeCursorOnLine(lineNum) {
+  const lines = editor.value.split('\n');
+  if (lineNum < 1 || lineNum > lines.length) return;
+  let pos = 0;
+  for (let k = 0; k < lineNum - 1; k++) pos += lines[k].length + 1;
+  pos += lines[lineNum - 1].match(/^ */)[0].length;
+  const focused = document.activeElement;
+  editor.setSelectionRange(pos, pos);
+  // Some browsers focus a field when its selection is set; keep focus where it was
+  if (focused && focused !== editor && document.activeElement === editor) focused.focus();
+  updateCursorPosition(false);
+}
+
+// Replaces editor text from start to end through the browser's editing commands,
+// so Cmd/Ctrl+Z can undo it (setting editor.value wipes the undo history).
+// The 'input' event this fires redraws the editor and schedules the auto-save.
+function editorReplace(start, end, text, selStart, selEnd) {
+  editor.setSelectionRange(start, end);
+  let ok = false;
+  try {
+    ok = text === '' ? (start === end || document.execCommand('delete'))
+                     : document.execCommand('insertText', false, text);
+  } catch (err) { ok = false; }
+  if (!ok) {  // fallback for browsers without execCommand (no undo there)
+    editor.setRangeText(text, start, end, 'end');
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  editor.setSelectionRange(selStart, selEnd);
+}
+
+// Start of the line holding pos, and end of the selected block of lines. A
+// selection that ends at the very start of a line doesn't include that line.
+function selectedLineRange(selStart, selEnd) {
+  const val = editor.value;
+  const lineStart = val.lastIndexOf('\n', selStart - 1) + 1;
+  let blockEnd = selEnd;
+  if (selEnd > selStart && val[selEnd - 1] === '\n') blockEnd = selEnd - 1;
+  const nl = val.indexOf('\n', blockEnd);
+  return { lineStart, lineEnd: nl === -1 ? val.length : nl };
+}
+
+// Lines that start a block: the next line is indented one more level
+const BLOCK_START_RE = /^(if|elseif|else|while|for|Function)\b/;
+
+// Tab indents, Shift+Tab outdents (3 spaces, per the Coral spec), Enter keeps indentation
 editor.addEventListener('keydown', e => {
   // While executing, the editor is read-only: let Tab / Shift+Tab move focus normally
-  if (e.key === 'Tab' && editor.readOnly) return;
+  if (editor.readOnly) {
+    if (e.key === 'Escape') editor.blur();
+    return;
+  }
+  const val = editor.value;
+  const selStart = editor.selectionStart, selEnd = editor.selectionEnd;
+
   if (e.key === 'Tab' && e.shiftKey) {
     // Shift+Tab outdents: removes up to 3 leading spaces from each selected line
     e.preventDefault();
-    const val = editor.value;
-    const selStart = editor.selectionStart, selEnd = editor.selectionEnd;
-    const lineStart = val.lastIndexOf('\n', selStart - 1) + 1;
-    const lines = val.slice(lineStart, selEnd).split('\n');
+    const { lineStart, lineEnd } = selectedLineRange(selStart, selEnd);
+    const lines = val.slice(lineStart, lineEnd).split('\n');
     let removedFirst = 0, removedTotal = 0;
     const outdented = lines.map((ln, i) => {
       const n = ln.match(/^ {0,3}/)[0].length;
@@ -2918,22 +3165,40 @@ editor.addEventListener('keydown', e => {
       removedTotal += n;
       return ln.slice(n);
     }).join('\n');
-    editor.value = val.slice(0, lineStart) + outdented + val.slice(selEnd);
-    editor.selectionStart = Math.max(lineStart, selStart - removedFirst);
-    editor.selectionEnd   = Math.max(editor.selectionStart, selEnd - removedTotal);
-    updateEditorUI();
-    scheduleAutoSave();
+    if (removedTotal === 0) return;
+    const newStart = Math.max(lineStart, selStart - removedFirst);
+    const newEnd   = Math.max(newStart, selEnd - removedTotal);
+    editorReplace(lineStart, lineEnd, outdented, newStart, newEnd);
     return;
   }
+
   if (e.key === 'Tab') {
     e.preventDefault();
-    const start = editor.selectionStart;
-    const end   = editor.selectionEnd;
-    const val   = editor.value;
-    editor.value = val.slice(0, start) + '   ' + val.slice(end);
-    editor.selectionStart = editor.selectionEnd = start + 3;
-    updateEditorUI();
+    if (selStart === selEnd) {
+      // No selection: insert 3 spaces at the cursor
+      editorReplace(selStart, selEnd, '   ', selStart + 3, selStart + 3);
+      return;
+    }
+    // Selection: indent every selected line (never replace the selected code)
+    const { lineStart, lineEnd } = selectedLineRange(selStart, selEnd);
+    const lines = val.slice(lineStart, lineEnd).split('\n');
+    const indented = lines.map(ln => '   ' + ln).join('\n');
+    editorReplace(lineStart, lineEnd, indented, selStart + 3, selEnd + 3 * lines.length);
+    return;
   }
+
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && !e.isComposing) {
+    // Keep the current line's indentation; add a level after if/elseif/else/while/for/Function
+    e.preventDefault();
+    const lineStart = val.lastIndexOf('\n', selStart - 1) + 1;
+    const before = val.slice(lineStart, selStart);
+    let indent = before.match(/^ */)[0];
+    if (BLOCK_START_RE.test(before.trim())) indent += '   ';
+    const text = '\n' + indent;
+    editorReplace(selStart, selEnd, text, selStart + text.length, selStart + text.length);
+    return;
+  }
+
   if (e.key === 'Escape') {
     editor.blur();
   }
@@ -2999,7 +3264,7 @@ function renderVarsTable(callStack) {
     // Just entered a function: say what was passed in
     const params = allRowData.filter(r => frame.paramNames.has(r.name)).map(r =>
       r.entry.value instanceof CoralArray
-        ? `${r.name} (array of ${r.entry.value.data.length})`
+        ? (r.entry.value.data.length ? `${r.name} (array of ${r.entry.value.data.length})` : `${r.name} (empty array)`)
         : `${r.name} = ${scalarDisplay(r)}`);
     if (params.length) changes.push('Parameters: ' + params.join(', '));
   } else for (const r of allRowData) {
@@ -3035,14 +3300,14 @@ function renderVarsTable(callStack) {
     const table = document.createElement('table');
     table.className = 'vars-section-table' + (sectionKey ? ' vars-table-' + sectionKey : '');
 
-    const cap = document.createElement('caption');
     if (label) {
+      const cap = document.createElement('caption');
       cap.textContent = label;
+      table.appendChild(cap);
     } else {
-      cap.className = 'sr-only';
-      cap.textContent = 'Variables';
+      // Named by the visible "Variables" heading, so it isn't read twice
+      table.setAttribute('aria-labelledby', 'vars-header');
     }
-    table.appendChild(cap);
 
     const thead = document.createElement('thead');
     thead.innerHTML = '<tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Value</th></tr>';
@@ -3051,7 +3316,9 @@ function renderVarsTable(callStack) {
     const tbody = document.createElement('tbody');
     if (rows.length === 0) {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="3" class="vars-empty">&mdash;</td>';
+      // A function declared "returns nothing" says so, like a void function
+      const empty = sectionKey === 'return' && !frame.returnVar ? 'Returns nothing' : '&mdash;';
+      tr.innerHTML = `<td colspan="3" class="vars-empty">${empty}</td>`;
       tbody.appendChild(tr);
     } else {
       for (const row of rows) tbody.appendChild(buildVarRow(row));
@@ -3079,7 +3346,7 @@ function renderVarsTable(callStack) {
 
       // Flash scalar row if value changed
       const prevKey = prevVarSnapshot.get(name);
-      if (prevKey !== undefined && prevKey !== key) {
+      if (prevKey !== undefined && prevKey !== key && flashAllowed()) {
         tr.classList.add('flashing');
         setTimeout(() => tr.classList.remove('flashing'), 650);
       }
@@ -3098,9 +3365,19 @@ function scalarDisplay(row) {
     : String(Math.trunc(Number(val)));
 }
 
+// Changed values flash, except during a Run faster than NO_FLASH_MS per step,
+// which would flash more than 3 times a second (WCAG 2.3.1)
+function flashAllowed() {
+  return !(state === STATE.RUNNING && currentSpeedMs() < NO_FLASH_MS);
+}
+
 function buildArraySubTable(arr, name) {
   const table = document.createElement('table');
   table.className = 'array-subtable';
+  // Names the nested table for screen readers (WCAG 1.3.1)
+  const n = arr.data.length;
+  table.setAttribute('aria-label', !arr._sizeSet ? `Array ${name}, size not set`
+    : n === 0 ? `Array ${name}, empty` : `Array ${name}, ${n} element${n === 1 ? '' : 's'}`);
 
   const thead = document.createElement('thead');
   thead.innerHTML = '<tr><th scope="col">Index</th><th scope="col">Value</th></tr>';
@@ -3130,7 +3407,7 @@ function buildArraySubTable(arr, name) {
       // Flash only this index row if its value changed since the last step
       const snapKey = name + '[' + i + ']';
       const prevVal = prevVarSnapshot.get(snapKey);
-      if (prevVal !== undefined && prevVal !== String(v)) {
+      if (prevVal !== undefined && prevVal !== String(v) && flashAllowed()) {
         tr.classList.add('flashing');
         setTimeout(() => tr.classList.remove('flashing'), 650);
       }
@@ -3144,15 +3421,20 @@ function buildArraySubTable(arr, name) {
 }
 
 function clearVars() {
+  // Named by the visible "Variables" heading (no hidden caption, so it isn't read twice)
   varsSections.innerHTML =
-    '<table class="vars-section-table"><caption class="sr-only">Variables</caption>' +
+    '<table class="vars-section-table" aria-labelledby="vars-header">' +
     '<thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Value</th></tr></thead>' +
     '<tbody><tr><td colspan="3" class="vars-empty">No variables yet</td></tr></tbody></table>';
   varsFnName.hidden = true;
   varsFnName.textContent = '';
   prevVarSnapshot = new Map();
   frameSnapshots = new WeakMap();
-  pendingDecision = null; // clearVars runs on every Execute/Restart/Edit — a fresh run
+  // clearVars runs on every Execute/Restart/Edit — a fresh run
+  pendingDecision = null;
+  stepDepth = 1;
+  lastStepMessage = '';
+  takeRunOutput();
 }
 
 // ── Flowchart ──

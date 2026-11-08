@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="themes.css?v=14">
-  <link rel="stylesheet" href="coral.css?v=45">
+  <link rel="stylesheet" href="coral.css?v=46">
 </head>
 <body>
 
@@ -26,8 +26,12 @@
 
   <!-- Screen-reader description for the code editor keyboard trap -->
   <p id="editor-keyboard-hint" class="sr-only">
-    Press Tab to indent (3 spaces) and Shift+Tab to outdent. Press Escape then Tab to leave the editor with the keyboard.
+    Press Tab to indent (3 spaces) and Shift+Tab to outdent. Enter keeps the indentation. Press Escape then Tab to leave the editor with the keyboard.
   </p>
+  <!-- Cursor position: read with the editor's description on focus, and announced
+       (politely) when the cursor moves to another line (WCAG 1.3.1) -->
+  <p id="editor-position" class="sr-only">Line 1, column 1</p>
+  <div id="cursor-announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
   <!-- URL param load banner (hidden until URL params detected) -->
   <div id="url-banner" role="status" aria-live="polite" hidden>
@@ -96,13 +100,13 @@
       <label for="speed-slider" class="speed-label">Speed</label>
       <input type="range" id="speed-slider" min="1" max="9" value="5" disabled
              aria-label="Execution speed" aria-valuemin="1" aria-valuemax="9" aria-valuenow="5"
-             aria-valuetext="Medium (step every 1.2 seconds)">
+             aria-valuetext="Step every 0.9 seconds">
     </div>
   </div>
 
   <!-- Input area -->
   <div id="input-area">
-    <label for="input-textarea">Program Inputs</label>
+    <h2 class="panel-heading"><label for="input-textarea">Program Inputs</label></h2>
     <textarea id="input-textarea" placeholder="Enter space-separated inputs (e.g. 10 3 -1)" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
   </div>
 
@@ -124,7 +128,7 @@
           <div id="active-line-highlight" aria-hidden="true"></div>
           <textarea id="code-editor"
                     aria-label="Coral code editor"
-                    aria-describedby="editor-keyboard-hint"
+                    aria-describedby="editor-position editor-keyboard-hint"
                     spellcheck="false"
                     autocorrect="off"
                     autocapitalize="off"
@@ -151,12 +155,12 @@
     </section>
 
     <!-- Variables panel -->
-    <aside id="vars-panel" aria-label="Variable values">
-      <div id="vars-header">Variables</div>
+    <!-- tabindex=0 so keyboard users can scroll it when a big array overflows (WCAG 2.1.1) -->
+    <aside id="vars-panel" aria-labelledby="vars-header" tabindex="0">
+      <h2 id="vars-header" class="panel-heading">Variables</h2>
       <div id="vars-fn-name" hidden></div>
       <div id="vars-sections">
-        <table class="vars-section-table">
-          <caption class="sr-only">Variables</caption>
+        <table class="vars-section-table" aria-labelledby="vars-header">
           <thead>
             <tr>
               <th scope="col">Name</th>
@@ -174,12 +178,13 @@
   </main>
 
   <!-- Output area -->
-  <section id="output-area" aria-label="Program output">
+  <section id="output-area" aria-labelledby="output-title">
     <div id="output-header">
-      <span>Output</span>
+      <h2 id="output-title" class="panel-heading">Output</h2>
       <button id="btn-clear-output" aria-label="Clear output">Clear</button>
     </div>
-    <div id="output" role="log" aria-live="polite" aria-atomic="false"></div>
+    <!-- tabindex=0 so keyboard users can scroll long output (WCAG 2.1.1) -->
+    <div id="output" role="log" aria-live="polite" aria-atomic="false" aria-label="Program output" tabindex="0"></div>
   </section>
 
   <!-- Help modal -->
@@ -201,11 +206,11 @@
           <dt>Execute / Edit</dt>
           <dd>Compiles your code and enters execution mode. Press again (labeled <em>Edit</em>) to return to editing.</dd>
           <dt>Step &#9654;</dt>
-          <dd>Advances execution one step at a time. The current line is highlighted in the editor and flowchart.</dd>
+          <dd>Advances execution one step at a time. The current line is highlighted in the editor and flowchart. When a function is called, the first step stops on its <code>Function</code> line so you can see the parameters receive their values.</dd>
           <dt>Run / Pause</dt>
           <dd>Runs the program automatically at the selected speed. Press again to pause.</dd>
           <dt>Speed slider</dt>
-          <dd>Controls how fast <em>Run</em> advances. Leftmost = slowest (3 s/step). Rightmost = fastest (0.75 s/step).</dd>
+          <dd>Controls how fast <em>Run</em> advances. Leftmost = slowest (8 s/step). Rightmost = fastest (0.1 s/step). With a screen reader, the slowest setting reads every step; faster settings read only output until you press Pause, which then reads where the program stopped.</dd>
           <dt>Instant &#9197;</dt>
           <dd>Runs the entire program to completion immediately, showing the final output and variable values.</dd>
         </dl>
@@ -220,14 +225,16 @@
           <li><strong>Running</strong> &mdash; executing automatically</li>
           <li><strong>Paused</strong> &mdash; mid-execution; resume with Run or advance with Step</li>
           <li><strong>Complete</strong> &mdash; program finished; press Edit to start over</li>
+          <li><strong>Stopped: error</strong> &mdash; the program hit a runtime error (shown in Output); fix it, or press Restart to run again</li>
         </ul>
         <p>The detail area shows which sub-part of a loop or branch is being evaluated (e.g., <em>for &mdash; checking condition</em>). The step counter on the right tracks total steps taken.</p>
       </section>
 
       <section class="help-section">
         <h3>Keyboard Navigation in the Editor</h3>
-        <p>Inside the editor, <strong>Tab</strong> inserts three spaces (Coral requires 3-space indentation) and <strong>Shift+Tab</strong> removes them. To move focus out of the editor using only the keyboard, press <strong>Escape</strong> first, then Tab to advance to the next control. While a program is executing, the editor is read-only and Tab moves focus normally.</p>
-        <p>With a screen reader, each step announces what the previous line did &mdash; whether a condition was true or false, any output, and variables that changed (including function parameters and returned values) &mdash; then the line that will run next.</p>
+        <p>Inside the editor, <strong>Tab</strong> inserts three spaces (Coral requires 3-space indentation) and <strong>Shift+Tab</strong> removes them. With several lines selected, Tab and Shift+Tab indent or outdent all of them. <strong>Enter</strong> keeps the current indentation, and adds one level after <code>if</code>, <code>elseif</code>, <code>else</code>, <code>while</code>, <code>for</code> and <code>Function</code>. <strong>Undo</strong> (Ctrl+Z or Cmd+Z) works for all of these. To move focus out of the editor using only the keyboard, press <strong>Escape</strong> first, then Tab to advance to the next control. While a program is executing, the editor is read-only and Tab moves focus normally.</p>
+        <p>With a screen reader, each step announces what the previous line did &mdash; whether a condition was true or false, any output, and variables that changed &mdash; then the line that will run next. When a function is called, you hear each parameter and its value and what the function returns; when it ends, you hear the value it returns (or that it returns nothing) and &ldquo;Back in&rdquo; the calling function.</p>
+        <p>Screen readers also hear the cursor&rsquo;s line number when it moves to another line. After an error, the cursor is placed on the line with the error, so when you return to the editor you are on that line. The Variables and Output panels can be focused with Tab and scrolled with the arrow keys.</p>
       </section>
 
       <section class="help-section">
@@ -269,6 +276,6 @@
     </div>
   </dialog>
 
-  <script src="coral.js?v=45"></script>
+  <script src="coral.js?v=46"></script>
 </body>
 </html>
