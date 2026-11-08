@@ -1609,7 +1609,9 @@ function _firstBodyH(stmts) {
     return _computeNodeH(shapeFor[s.type] || 'rect', labelFor[s.type](s));
   }
   if (s.type === 'While') return _computeNodeH('diamond', exprText(s.condition));
-  if (s.type === 'If')    return _computeNodeH('diamond', exprText(s.branches[0].cond));
+  // If nodes store their first condition in .condition (there is no .branches) —
+  // reading .branches crashed the flowchart for any block starting with an `if`
+  if (s.type === 'If')    return _computeNodeH('diamond', exprText(s.condition));
   return FC.NODE_H; // For init-rect, default height
 }
 
@@ -2086,11 +2088,14 @@ let lastStepLine = null;
 let runTimer = null;
 let outputLineCount = 0;
 let currentOutputLine = null;
-let prevVarSnapshot = new Map(); // for flash detection
+let prevVarSnapshot = new Map(); // previous values for the frame being rendered (flash + announcements)
+let frameSnapshots = new WeakMap(); // call-stack frame → its last snapshot, so Main's values survive a function call
 let fcScale = 1, fcTx = 0, fcTy = 0;
 let fcPanActive = false, fcPanStartX = 0, fcPanStartY = 0, fcPanStartTx = 0, fcPanStartTy = 0;
 let activeTab = 'code';
 let announceTimer = null;
+let logSilenceTimer = null;
+let pendingDecision = null; // decision line from the previous step, resolved true/false on the next step
 
 // ── Screen-reader announcements ──
 // Polite announcement (WCAG 4.1.3). Clear first so identical consecutive
@@ -2102,8 +2107,19 @@ function announce(text) {
   announceTimer = setTimeout(() => { stepAnnounce.textContent = text; }, 50);
 }
 
+// Runs fn with the Output log's live announcements switched off, for content that
+// is already spoken another way (step messages, #error-announce), so screen
+// readers hear it once instead of two polite regions competing.
+function withLogSilenced(fn) {
+  clearTimeout(logSilenceTimer);
+  outputEl.setAttribute('aria-live', 'off');
+  try { fn(); }
+  finally { logSilenceTimer = setTimeout(() => outputEl.setAttribute('aria-live', 'polite'), 100); }
+}
+
 // ── State machine ──
 function setState(newState) {
+  const focusedBefore = document.activeElement;
   state = newState;
   const isEdit     = state === STATE.EDIT;
   const isRunning  = state === STATE.RUNNING;
@@ -2142,6 +2158,15 @@ function setState(newState) {
   }
 
   updateSpeedAriaText();
+
+  // If the control that had focus just became disabled (e.g. Step at the end of a
+  // program), the browser drops focus to <body>. Move it somewhere useful (WCAG 2.4.3).
+  if (focusedBefore && focusedBefore !== document.body && focusedBefore.disabled) {
+    const target = isComplete ? btnRestart
+                 : isEdit     ? btnExecuteEdit
+                 : !btnStep.disabled ? btnStep : btnExecuteEdit;
+    target.focus();
+  }
 }
 
 function currentSpeedMs() {
@@ -2174,6 +2199,9 @@ btnExecuteEdit.addEventListener('click', () => {
     tokens = lex(src);
     parsedAst = new Parser(tokens).parse();
   } catch(e) {
+    setFlowchartUnavailable(e.line
+      ? `Fix the error on line ${e.line} (shown in Output), then press Execute again.`
+      : 'Fix the error shown in Output, then press Execute again.');
     showError(e);
     return;
   }
@@ -2198,18 +2226,21 @@ btnExecuteEdit.addEventListener('click', () => {
       forUpdateMap   = flowchartGraph.forUpdateMap;
       fcPlaceholder.style.display = 'none';
     } catch(e) {
+      // Never fail silently: tell the student, and log details for the instructor
+      console.error('Flowchart layout failed:', e);
       flowchartGraph = null;
       lineToNodeId = new Map();
       forCondMap   = new Map();
       forUpdateMap = new Map();
+      setFlowchartUnavailable("The flowchart couldn't be drawn for this program. " +
+        'Your program still runs; use the Code tab to follow it.');
     }
   } else {
     flowchartGraph = null;
     lineToNodeId = new Map();
     forCondMap   = new Map();
     forUpdateMap = new Map();
-    fcPlaceholder.style.display = 'flex';
-    fcPlaceholder.textContent = 'Flowchart not available for programs with user-defined functions.';
+    setFlowchartUnavailable('Flowchart not available for programs with user-defined functions.');
   }
 
   if (activeTab === 'flowchart') renderFlowchart(null);
@@ -2261,12 +2292,15 @@ function advanceOneStep() {
   if (!currentGenerator) return;
   try {
     const { value, done } = currentGenerator.next();
-    flushOutput();
+    // Output from this step is spoken as part of the step message, so keep the
+    // Output log quiet while adding it (one announcement, not two competing ones)
+    const produced = genOutput.join('');
+    withLogSilenced(flushOutput);
     if (done) {
-      finishExecution();
+      finishExecution(produced);
       return;
     }
-    if (value) applyStep(value);
+    if (value) applyStep(value, produced);
     if (state !== STATE.RUNNING) setState(STATE.PAUSED);
   } catch(e) {
     flushOutput();
@@ -2276,7 +2310,7 @@ function advanceOneStep() {
   }
 }
 
-function applyStep(yieldValue) {
+function applyStep(yieldValue, produced) {
   const { loc, scope, callStack } = yieldValue;
   if (loc) {
     lastStepLine = loc.line;
@@ -2301,21 +2335,78 @@ function applyStep(yieldValue) {
     statusDetail.textContent = '';
   }
 
-  announce(describeStep(loc, varChanges));
+  const depth = callStack ? callStack.length : 1;
+  announce(describeStep(loc, varChanges, produced, depth));
 }
 
 // Builds the screen-reader text for one step, e.g.
-// "Step 7. i is now 1. Line 3, checking loop condition: for i = 0; i < 5; i = i + 1."
-// Variable changes come first: they are the result of the previous line, while the
-// highlighted line is the one about to run (same as the visual display).
-const STEP_PART_TEXT = {
-  forInit:   'loop setup',
-  forCond:   'checking loop condition',
-  forUpdate: 'loop update',
-  returning: 'returning',
-};
-function describeStep(loc, varChanges) {
+// "Step 8. i < 5 is true. Output: 0. i is now 1. Line 3: Put i to output"
+// Everything before "Line N" is the result of the previous line; the highlighted
+// line is the one about to run (same as the visual display).
+const FOR_PART_TEXT = { forInit: 'setup', forCond: 'condition', forUpdate: 'update' };
+
+function srcLine(lineNum) {
+  return (editor.value.split('\n')[lineNum - 1] || '').trim();
+}
+
+// "for i = 0; i < 5; i = i + 1" → { forInit:'i = 0', forCond:'i < 5', forUpdate:'i = i + 1' }
+function parseForHeader(code) {
+  const m = /^for\s+(.*)$/.exec(code);
+  if (!m) return null;
+  const [forInit, forCond, forUpdate] = m[1].split(';').map(s => s.trim());
+  return { forInit, forCond, forUpdate };
+}
+
+// Last line number of the indented block that belongs to lineNum (Coral blocks are
+// defined by indentation), or lineNum itself if it has no block.
+function blockEnd(lineNum) {
+  const lines = editor.value.split('\n');
+  const indentOf = s => s.match(/^ */)[0].length;
+  const base = indentOf(lines[lineNum - 1] || '');
+  let end = lineNum;
+  for (let k = lineNum; k < lines.length; k++) {
+    if (!lines[k].trim()) continue;
+    if (indentOf(lines[k]) <= base) break;
+    end = k + 1;
+  }
+  return end;
+}
+
+// Is the line about to run a decision? (if / elseif / while / for condition)
+function decisionAt(loc, depth) {
+  if (!loc || !loc.line) return null;
+  const code = srcLine(loc.line);
+  if (loc.part === 'forCond') {
+    const p = parseForHeader(code);
+    return p ? { line: loc.line, cond: p.forCond, depth } : null;
+  }
+  if (loc.part) return null;
+  const m = /^(?:if|elseif|while)\s+(.*)$/.exec(code);
+  return m ? { line: loc.line, cond: m[1], depth } : null;
+}
+
+// The decision from the previous step was true if execution moved into its block.
+// If the condition called a function (we're deeper in the call stack), wait.
+function resolveDecision(loc, depth) {
+  const d = pendingDecision;
+  if (!d || depth > d.depth) return '';
+  pendingDecision = null;
+  const wentIn = !!(loc && depth === d.depth && loc.line > d.line && loc.line <= blockEnd(d.line));
+  return `${d.cond} is ${wentIn ? 'true' : 'false'}.`;
+}
+
+// Spoken form of program output: makes newlines and spaces audible
+function describeOutput(text) {
+  if (/^\n+$/.test(text)) return text.length === 1 ? 'new line' : `${text.length} new lines`;
+  if (/^ +$/.test(text))  return text.length === 1 ? 'a space' : `${text.length} spaces`;
+  return text.replace(/\n/g, ' (new line) ').replace(/\s+/g, ' ').trim();
+}
+
+function describeStep(loc, varChanges, produced, depth) {
   let msg = `Step ${stepIndex}.`;
+  const outcome = resolveDecision(loc, depth);
+  if (outcome) msg += ' ' + outcome;
+  if (produced) msg += ` Output: ${describeOutput(produced)}.`;
   const MAX_CHANGES = 4;
   if (varChanges.length) {
     msg += ' ' + varChanges.slice(0, MAX_CHANGES).join('. ') + '.';
@@ -2325,15 +2416,26 @@ function describeStep(loc, varChanges) {
   }
   if (statusDetail.textContent) msg += ` Now ${statusDetail.textContent}.`;
   if (loc && loc.line) {
-    msg += ` Line ${loc.line}`;
-    if (STEP_PART_TEXT[loc.part]) msg += `, ${STEP_PART_TEXT[loc.part]}`;
-    const code = (editor.value.split('\n')[loc.line - 1] || '').trim();
-    msg += code ? `: ${code}` : '.';
+    const code = srcLine(loc.line);
+    const forParts = FOR_PART_TEXT[loc.part] && parseForHeader(code);
+    if (forParts) {
+      // Read only the part of the for header that is running (matches the flowchart node)
+      msg += ` Line ${loc.line}, loop ${FOR_PART_TEXT[loc.part]}: ${forParts[loc.part]}`;
+    } else {
+      msg += ` Line ${loc.line}`;
+      if (loc.part === 'returning') msg += ', returning';
+      msg += code ? `: ${code}` : '.';
+    }
+  } else {
+    msg += ' Reached the end of the program.';
   }
+  pendingDecision = decisionAt(loc, depth);
   return msg;
 }
 
-function finishExecution() {
+// produced: output from the final step when finishing via Step/Run (spoken in the
+// step message); undefined when finishing via Instant (the Output log speaks it).
+function finishExecution(produced) {
   clearActiveLineHighlight();
   statusDetail.textContent = '';
   setState(STATE.COMPLETE);
@@ -2345,7 +2447,14 @@ function finishExecution() {
   const done = document.createElement('div');
   done.className = 'out-warn';
   done.textContent = '— Program complete —';
-  outputEl.appendChild(done);
+  if (produced === undefined) {
+    outputEl.appendChild(done);
+  } else {
+    withLogSilenced(() => outputEl.appendChild(done));
+    const outcome = resolveDecision(null, 1);
+    announce((outcome ? outcome + ' ' : '') +
+      (produced ? `Output: ${describeOutput(produced)}. ` : '') + 'Program complete.');
+  }
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
@@ -2434,26 +2543,46 @@ function clearOutput() {
 btnClearOutput.addEventListener('click', clearOutput);
 
 // ── Error display ──
+// Lower-cased keyword → correct spelling, for "did you mean" suggestions
+const KEYWORD_SPELLING = new Map([...KEYWORDS.keys()].map(k => [k.toLowerCase(), k]));
+
+// If a syntax-error line contains a keyword typed in the wrong case (e.g. "put"),
+// suggest the correct spelling (WCAG 3.3.3 Error Suggestion)
+function keywordCaseHint(lineNum) {
+  if (!lineNum) return '';
+  for (const word of srcLine(lineNum).match(/[A-Za-z]+/g) || []) {
+    const proper = KEYWORD_SPELLING.get(word.toLowerCase());
+    if (proper && proper !== word) {
+      return `Coral keywords are case-sensitive. Did you mean '${proper}' instead of '${word}'?`;
+    }
+  }
+  return '';
+}
+
 function showError(e) {
   const line  = e.line  || null;
-  const hint  = e.hint  || '';
   const msg   = e.message || String(e);
+  const isSyntax = e.name === 'ParseError' || e.name === 'LexError';
+  // Hints sometimes start with their own "Line N:" — drop it so the line number is
+  // stated (and spoken) once
+  let hint = (e.hint || '').replace(/^Line \d+:\s*/, '');
+  if (isSyntax) hint = keywordCaseHint(line) || hint;
 
-  // Highlight line if available
-  if (line) highlightEditorLine(line);
+  // Highlight line if available — in the editor and, for runtime errors, the flowchart
+  if (line) {
+    highlightEditorLine(line);
+    if (flowchartGraph) syncFlowchartHighlight(line);
+  }
 
   const text = (line ? `Line ${line}: ` : '') + msg + (hint ? '\n' + hint : '');
 
-  // Visible error in output log. The log's live announcement is switched off for
-  // this one insertion so the error is spoken once (by #error-announce below), not
-  // twice; the text stays in the log for students to review later.
+  // Visible error in output log, kept quiet so it is spoken once (by
+  // #error-announce below); the text stays in the log for students to review later.
   const div = document.createElement('div');
   div.className = 'out-error';
   div.textContent = text;
-  outputEl.setAttribute('aria-live', 'off');
-  outputEl.appendChild(div);
+  withLogSilenced(() => outputEl.appendChild(div));
   outputEl.scrollTop = outputEl.scrollHeight;
-  setTimeout(() => outputEl.setAttribute('aria-live', 'polite'), 100);
 
   // Assertive screen-reader announcement (WCAG 4.1.3) — clears then sets so
   // repeated errors are always re-announced even if the text is identical.
@@ -2643,6 +2772,12 @@ function renderVarsTable(callStack) {
   const vars = frame.scope.allVars();
   const isFunction = callStack.length > 1;
 
+  // Compare against this frame's own last snapshot. A single shared snapshot lost
+  // Main's values during a function call, so the returned value (e.g. result = 37.0)
+  // was never flashed or announced.
+  const isNewFrame = !frameSnapshots.has(frame);
+  prevVarSnapshot = frameSnapshots.get(frame) || new Map();
+
   // Flat list of all rows for flash detection
   const allRowData = [];
   vars.forEach((entry, name) => {
@@ -2684,17 +2819,21 @@ function renderVarsTable(callStack) {
   }
 
   // Plain-language list of what changed since the last step, for screen readers.
-  // Skipped when the frame changed (function call/return) — the step text says that.
   const changes = [];
-  const sameFrame = prevVarSnapshot.size > 0 &&
-    allRowData.some(r => prevVarSnapshot.has(r.name) || prevVarSnapshot.has(r.name + '[0]'));
-  for (const r of allRowData) {
+  if (isFunction && isNewFrame) {
+    // Just entered a function: say what was passed in
+    const params = allRowData.filter(r => frame.paramNames.has(r.name)).map(r =>
+      r.entry.value instanceof CoralArray
+        ? `${r.name} (array of ${r.entry.value.data.length})`
+        : `${r.name} = ${scalarDisplay(r)}`);
+    if (params.length) changes.push('Parameters: ' + params.join(', '));
+  } else for (const r of allRowData) {
     const val = r.entry.value;
     if (val instanceof CoralArray) {
       const wasSized = prevVarSnapshot.has(r.name + '[0]');
       const existed  = wasSized || prevVarSnapshot.has(r.name);
       if (!existed) {
-        if (sameFrame || prevVarSnapshot.size === 0) changes.push(`${r.name} declared`);
+        changes.push(`${r.name} declared`);
       } else if (val._sizeSet && !wasSized) {
         changes.push(`${r.name} now has ${val.data.length} elements`);
       } else if (val._sizeSet) {
@@ -2707,13 +2846,14 @@ function renderVarsTable(callStack) {
     } else {
       const prevKey = prevVarSnapshot.get(r.name);
       if (prevKey === undefined) {
-        if (sameFrame || prevVarSnapshot.size === 0) changes.push(`${r.name} declared, value ${scalarDisplay(r)}`);
+        changes.push(`${r.name} declared, value ${scalarDisplay(r)}`);
       } else if (prevKey !== r.key) {
         changes.push(`${r.name} is now ${scalarDisplay(r)}`);
       }
     }
   }
 
+  frameSnapshots.set(frame, newSnapshot);
   prevVarSnapshot = newSnapshot;
 
   function buildSectionTable(label, sectionKey, rows) {
@@ -2836,16 +2976,30 @@ function clearVars() {
   varsFnName.hidden = true;
   varsFnName.textContent = '';
   prevVarSnapshot = new Map();
+  frameSnapshots = new WeakMap();
+  pendingDecision = null; // clearVars runs on every Execute/Restart/Edit — a fresh run
 }
 
 // ── Flowchart ──
+
+// Empties the flowchart and shows `message` in its place. The SVG is hidden from
+// screen readers so they hear the message, not the previous program's description.
+function setFlowchartUnavailable(message) {
+  chartRoot.innerHTML = '';
+  flowchartSvg.setAttribute('aria-hidden', 'true');
+  flowchartSvg.setAttribute('aria-label', 'Program flowchart');
+  document.getElementById('flowchart-desc').textContent = '';
+  if (message) fcPlaceholder.textContent = message;
+  fcPlaceholder.style.display = 'flex';
+}
+
 function renderFlowchart(activeNodeId) {
   if (!flowchartGraph) {
-    fcPlaceholder.style.display = 'flex';
-    chartRoot.innerHTML = '';
+    setFlowchartUnavailable();
     return;
   }
   fcPlaceholder.style.display = 'none';
+  flowchartSvg.removeAttribute('aria-hidden');
   const svgHtml = renderFlowchartSVG(flowchartGraph, activeNodeId);
   // Set SVG content via temporary element to avoid script injection
   const parser = new DOMParser();
@@ -2895,11 +3049,7 @@ function syncFlowchartHighlight(lineNum, part) {
 }
 
 function clearFlowchart() {
-  chartRoot.innerHTML = '';
-  if (flowchartGraph === null) {
-    fcPlaceholder.style.display = 'flex';
-    fcPlaceholder.textContent = 'Press Execute to generate the flowchart.';
-  }
+  setFlowchartUnavailable('Press Execute to generate the flowchart.');
 }
 
 // Zoom / pan
