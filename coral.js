@@ -2247,6 +2247,8 @@ const errorAnnounce   = document.getElementById('error-announce');
 const stepAnnounce    = document.getElementById('step-announce');
 const urlBanner      = document.getElementById('url-banner');
 const btnUrlClose     = document.getElementById('btn-url-banner-close');
+const editorKeyboardHint = document.getElementById('editor-keyboard-hint');
+const editorPosVisible   = document.getElementById('editor-pos-visible');
 const panelCode      = document.getElementById('panel-code');
 const panelFlowchart = document.getElementById('panel-flowchart');
 const tabCode        = document.getElementById('tab-code');
@@ -2274,6 +2276,7 @@ let forCondMap   = new Map();
 let forUpdateMap = new Map();
 let stepIndex = 0;
 let lastStepLine = null;
+let lastStepPart = null; // for-loop part of the current step, so the Flowchart tab can re-highlight it
 let runTimer = null;
 let outputLineCount = 0;
 let currentOutputLine = null;
@@ -2319,7 +2322,8 @@ function setState(newState) {
   const inExec     = !isEdit;
 
   btnExecuteEdit.textContent = isEdit ? 'Execute' : 'Edit';
-  btnExecuteEdit.setAttribute('aria-label', isEdit ? 'Execute program' : 'Return to edit mode');
+  // Names start with the visible word so "Click Edit" works by voice (WCAG 2.5.3)
+  btnExecuteEdit.setAttribute('aria-label', isEdit ? 'Execute program' : 'Edit: return to edit mode');
 
   btnStep.disabled = !(isReady || isPaused);
   btnRestart.disabled = isEdit;
@@ -2335,6 +2339,14 @@ function setState(newState) {
   editor.readOnly = inExec;
   inputTextarea.readOnly = inExec;
   sampleSelect.disabled = inExec;
+  // Explain why the sample menu is greyed out (tooltip + screen-reader description)
+  const sampleHint = inExec ? 'Press Edit to load a different sample.' : '';
+  sampleSelect.title = sampleHint;
+  document.getElementById('sample-select-hint').textContent = sampleHint;
+  // While running, the editor is read-only and Tab leaves it normally
+  editorKeyboardHint.textContent = inExec
+    ? 'Read-only while the program runs · Tab moves to the next control · Press Edit to change code'
+    : 'Tab indents · Shift+Tab outdents · Esc then Tab leaves the editor';
 
   // Status bar state class
   statusBar.className = 'state-' + state.toLowerCase();
@@ -2552,6 +2564,7 @@ function applyStep(yieldValue, produced) {
   const { loc, scope, callStack } = yieldValue;
   if (loc) {
     lastStepLine = loc.line;
+    lastStepPart = loc.part || null;
     highlightEditorLine(loc.line);
     syncFlowchartHighlight(loc.line, loc.part);
   } else {
@@ -2871,7 +2884,10 @@ function clearOutput() {
   currentOutputLine = null;
 }
 
-btnClearOutput.addEventListener('click', clearOutput);
+btnClearOutput.addEventListener('click', () => {
+  clearOutput();
+  announce('Output cleared.'); // otherwise nothing tells a screen-reader user it worked (WCAG 4.1.3)
+});
 
 // ── Error display ──
 // Lower-cased keyword → correct spelling, for "did you mean" suggestions
@@ -3079,6 +3095,7 @@ function caretLineCol() {
 function updateCursorPosition(speak) {
   const { line, col } = caretLineCol();
   editorPosition.textContent = `Line ${line}, column ${col}`;
+  editorPosVisible.textContent = `Ln ${line}, Col ${col}`;
   if (speak && line !== lastCursorLine) {
     // Wait until the cursor settles so holding an arrow key doesn't queue every line
     clearTimeout(cursorAnnounceTimer);
@@ -3602,6 +3619,10 @@ function switchToTab(name) {
   if (!isCode && flowchartGraph) {
     const activeId = state === STATE.COMPLETE ? flowchartGraph.endId : null;
     renderFlowchart(activeId);
+    // Mid-run, highlight the current step (it was blank until the next Step)
+    if (!activeId && lastStepLine && state !== STATE.EDIT && state !== STATE.READY) {
+      syncFlowchartHighlight(lastStepLine, lastStepPart);
+    }
   }
 }
 
@@ -3674,6 +3695,18 @@ textSizeSelect.addEventListener('change', () => applyTextSize(textSizeSelect.val
 btnHelp.addEventListener('click', () => { helpModal.showModal(); btnHelpClose.focus(); });
 btnHelpClose.addEventListener('click', () => { helpModal.close(); btnHelp.focus(); });
 helpModal.addEventListener('close',    () => btnHelp.focus());
+
+// Keep Tab inside the Help dialog: wrap from the last control to the first (and
+// back with Shift+Tab), so focus never lands on the page body or browser UI (WCAG 2.4.7)
+helpModal.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return;
+  const items = [...helpModal.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 // ── Sample programs ──
 sampleSelect.addEventListener('change', () => {

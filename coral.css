@@ -455,6 +455,26 @@ header h1 {
   font-feature-settings: "liga" 0, "calt" 0;
 }
 
+/* Placeholder uses the theme's --muted color (passes 4.5:1 in every theme); the
+   browser default grey failed in 6 of 9 themes (WCAG 1.4.3) */
+#code-editor::placeholder { color: var(--muted); opacity: 1; }
+
+/* Status line under the editor: cursor position and how to leave the editor by
+   keyboard, visible to sighted keyboard users (WCAG 2.1.2) */
+#editor-statusbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  padding: 3px 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+#editor-pos-visible { font-family: var(--mono); white-space: nowrap; }
+
 /* Also disable ligatures on the highlight overlay.
    Always reset letter/word-spacing so textarea and overlay stay pixel-perfect
    regardless of theme or dyslexic body spacing overrides. */
@@ -1146,6 +1166,20 @@ a:focus-visible {
   #toolbar { gap: 4px; padding: 4px 8px; }
   button { padding: 4px 10px; font-size: 0.82rem; }
   select { padding: 4px 28px 4px 8px; font-size: 0.82rem; } /* preserve right gap for arrow */
+}
+
+/* Phones: Fit / + / − move out of the diagram into a row above it, so they
+   don't cover nodes or TRUE/FALSE labels */
+@media (max-width: 600px) {
+  #flowchart-controls {
+    position: static;
+    order: -1;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: 4px 8px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
 }
 
 /* ── Assertive error announce (screen reader only) ── */

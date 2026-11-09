@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="themes.css?v=14">
-  <link rel="stylesheet" href="coral.css?v=46">
+  <link rel="stylesheet" href="coral.css?v=47">
 </head>
 <body>
 
@@ -24,19 +24,16 @@
        and confirmations such as "sample loaded" (WCAG 1.3.1 / 4.1.3) -->
   <div id="step-announce" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Screen-reader description for the code editor keyboard trap -->
-  <p id="editor-keyboard-hint" class="sr-only">
-    Press Tab to indent (3 spaces) and Shift+Tab to outdent. Enter keeps the indentation. Press Escape then Tab to leave the editor with the keyboard.
-  </p>
   <!-- Cursor position: read with the editor's description on focus, and announced
        (politely) when the cursor moves to another line (WCAG 1.3.1) -->
   <p id="editor-position" class="sr-only">Line 1, column 1</p>
+  <span id="sample-select-hint" class="sr-only"></span>
   <div id="cursor-announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
   <!-- URL param load banner (hidden until URL params detected) -->
   <div id="url-banner" role="status" aria-live="polite" hidden>
     <span id="url-banner-msg">&#8505;&#xFE0E; Code pre-loaded from shared link. Review it below, then press Execute.</span>
-    <button id="btn-url-banner-close" aria-label="Dismiss banner">&#x2715;</button>
+    <button id="btn-url-banner-close" aria-label="&#x2715; Dismiss banner">&#x2715;</button>
   </div>
 
   <!-- Title bar -->
@@ -51,7 +48,7 @@
       <span id="status-step"></span>
     </div>
     <div class="header-controls">
-      <select id="sample-select" aria-label="Load sample program">
+      <select id="sample-select" aria-label="Load sample program" aria-describedby="sample-select-hint">
         <option value="">Load sample&hellip;</option>
         <option value="hello">Hello World</option>
         <option value="math">Simple Math</option>
@@ -79,8 +76,9 @@
         <option value="xl">Extra Large</option>
         <option value="projector">Projector</option>
       </select>
-      <button id="btn-help" aria-label="Open help" title="Help">?</button>
-      <a id="btn-bug" href="https://github.com/coral-sim/coral-sim.github.io/issues" target="_blank" rel="noopener noreferrer" aria-label="Report a bug on GitHub (opens in new tab)" title="Report a bug (opens in new tab)">&#x26A0;&#xFE0E;</a>
+      <!-- Accessible names start with the visible symbol so voice-control users can say it (WCAG 2.5.3) -->
+      <button id="btn-help" aria-label="? Help" title="Help">?</button>
+      <a id="btn-bug" href="https://github.com/coral-sim/coral-sim.github.io/issues" target="_blank" rel="noopener noreferrer" aria-label="&#x26A0;&#xFE0E; Report a bug on GitHub (opens in new tab)" title="Report a bug (opens in new tab)">&#x26A0;&#xFE0E;</a>
     </div>
   </header>
 
@@ -136,6 +134,14 @@
                     placeholder="Write Coral code here&hellip;"></textarea>
         </div>
       </div>
+      <!-- Visible editor status line: cursor position for everyone, and how to leave the
+           editor by keyboard (WCAG 2.1.2 requires the Esc-then-Tab exit to be stated).
+           The key hint is also the editor's description for screen readers; the short
+           "Ln/Col" text is hidden from them because #editor-position says it in words. -->
+      <div id="editor-statusbar">
+        <span id="editor-pos-visible" aria-hidden="true">Ln 1, Col 1</span>
+        <span id="editor-keyboard-hint">Tab indents &middot; Shift+Tab outdents &middot; Esc then Tab leaves the editor</span>
+      </div>
     </section>
 
     <!-- Flowchart panel -->
@@ -147,10 +153,10 @@
           <g id="chart-root"></g>
         </svg>
       </div>
-      <div id="flowchart-controls" aria-label="Flowchart view controls">
+      <div id="flowchart-controls" role="group" aria-label="Flowchart view controls">
         <button id="btn-fit" aria-label="Fit flowchart to screen">Fit</button>
-        <button id="btn-zoom-in" aria-label="Zoom in">+</button>
-        <button id="btn-zoom-out" aria-label="Zoom out">&minus;</button>
+        <button id="btn-zoom-in" aria-label="+ Zoom in">+</button>
+        <button id="btn-zoom-out" aria-label="&minus; Zoom out">&minus;</button>
       </div>
     </section>
 
@@ -191,7 +197,7 @@
   <dialog id="help-modal" aria-labelledby="help-modal-title">
     <div class="modal-header">
       <h2 id="help-modal-title">How to Use Coral Sim</h2>
-      <button id="btn-help-close" aria-label="Close help">&#x2715;</button>
+      <button id="btn-help-close" aria-label="&#x2715; Close help">&#x2715;</button>
     </div>
     <div class="modal-body">
 
@@ -232,7 +238,7 @@
 
       <section class="help-section">
         <h3>Keyboard Navigation in the Editor</h3>
-        <p>Inside the editor, <strong>Tab</strong> inserts three spaces (Coral requires 3-space indentation) and <strong>Shift+Tab</strong> removes them. With several lines selected, Tab and Shift+Tab indent or outdent all of them. <strong>Enter</strong> keeps the current indentation, and adds one level after <code>if</code>, <code>elseif</code>, <code>else</code>, <code>while</code>, <code>for</code> and <code>Function</code>. <strong>Undo</strong> (Ctrl+Z or Cmd+Z) works for all of these. To move focus out of the editor using only the keyboard, press <strong>Escape</strong> first, then Tab to advance to the next control. While a program is executing, the editor is read-only and Tab moves focus normally.</p>
+        <p>Inside the editor, <strong>Tab</strong> inserts three spaces (Coral requires 3-space indentation) and <strong>Shift+Tab</strong> removes them. With several lines selected, Tab and Shift+Tab indent or outdent all of them. <strong>Enter</strong> keeps the current indentation, and adds one level after <code>if</code>, <code>elseif</code>, <code>else</code>, <code>while</code>, <code>for</code> and <code>Function</code>. <strong>Undo</strong> (Ctrl+Z or Cmd+Z) works for all of these. To move focus out of the editor using only the keyboard, press <strong>Escape</strong> first, then Tab to advance to the next control. While a program is executing, the editor is read-only and Tab moves focus normally. The line under the editor shows the cursor&rsquo;s line and column (<em>Ln</em>, <em>Col</em>) and these keys.</p>
         <p>With a screen reader, each step announces what the previous line did &mdash; whether a condition was true or false, any output, and variables that changed &mdash; then the line that will run next. When a function is called, you hear each parameter and its value and what the function returns; when it ends, you hear the value it returns (or that it returns nothing) and &ldquo;Back in&rdquo; the calling function.</p>
         <p>Screen readers also hear the cursor&rsquo;s line number when it moves to another line. After an error, the cursor is placed on the line with the error, so when you return to the editor you are on that line. The Variables and Output panels can be focused with Tab and scrolled with the arrow keys.</p>
       </section>
@@ -276,6 +282,6 @@
     </div>
   </dialog>
 
-  <script src="coral.js?v=46"></script>
+  <script src="coral.js?v=47"></script>
 </body>
 </html>
